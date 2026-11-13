@@ -121,7 +121,7 @@ function asg(i,s){D.users[i].s=+s;save();toast('Usuario reasignado')}
 function delU(i){D.users.splice(i,1);save();draw()}
 draw();
 let CRED=null;
-async function rpc(f,a){const r=await fetch(SB_URL+'/rest/v1/rpc/'+f,{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(a)});if(!r.ok){let m='Error de conexión con el servidor';try{m=(await r.json()).message||m}catch(e){}throw new Error(m)}return r.json()}
+async function rpc(f,a){const r=await fetch(SB_URL+'/rest/v1/rpc/'+f,{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(a)});if(!r.ok){let m='Error de conexión con el servidor';try{m=(await r.json()).message||m}catch(e){}throw new Error(m)}const t=await r.text();return t?JSON.parse(t):null}
 async function sync(){const d=await rpc('p_data',{p_u:CRED.u,p_c:CRED.p});D.locales=d.locales;D.sucs=d.sucs;D.users=d.users;save()}
 async function cl(a,x){try{await rpc('p_admin',{p_u:CRED.u,p_c:CRED.p,p_a:a,p_x:x});await sync();toast('Listo ✔');draw()}catch(e){const m=e.message;toast(m.includes('duplicate')?'Ese nombre ya existe':m.includes('foreign key')?'No se puede eliminar: tiene elementos asociados':m)}}
 if(CLOUD){
