@@ -61,7 +61,7 @@ async function login(){const u=$('#lu').value.trim(),p=$('#lp').value;
  if(u.toUpperCase()==='SACC'){if(!D.mh){if(p.length<8)return toast('Primer acceso: define una clave maestra de 8 o más caracteres');D.ms=crypto.randomUUID();D.mh=await hs(p,D.ms);save();toast('Clave maestra creada')}if(await hs(p,D.ms)!==D.mh)return toast('Usuario o contraseña incorrectos');me={u:'SACC',role:'Master',suc:D.sucs[0]?D.sucs[0].id:null}}
  else{const hp=await hs(p,D.ms||'');const x=D.users.find(x=>x.u.toLowerCase()===u.toLowerCase()&&(x.h?x.h===hp:x.p===p));if(!x)return toast('Usuario o contraseña incorrectos');me={u:x.u,role:x.role,suc:x.s}}
  suc=me.suc;view='inicio';cart=[];draw()}
-function logout(){me=null;CRED=null;OFFL=false;if(CLOUD){D.users=[];save()}draw()}
+function logout(){if(CLOUD&&CRED&&CRED.t)rpc('p_logout',{p_u:CRED.u,p_c:CRED.t}).catch(()=>{});me=null;CRED=null;OFFL=false;if(CLOUD){D.users=[];save()}draw()}
 function go(v){view=v;q='';draw()}
 function setSuc(v){suc=+v;cart=[];draw()}
 
@@ -178,7 +178,7 @@ function wok(id){const p=D.prods.find(x=>x.id==id),k=Math.round(wkg()*1000)/1000
 async function loadProds(){const r=await rpc('p_prod_list',{p_u:CRED.u,p_c:CRED.p,p_s:suc});D.prods=r.map(x=>({id:x.id,c:x.codigo,n:x.nombre,cat:x.categoria||'',prov:x.proveedor||'',u:x.unidad,pr:+x.precio,st:+x.stock,s:x.sucursal_id}));save()}
 function vPerfil(){return `<div class="grid2"><div class="card"><h3>Mi perfil</h3><p><b>${esc(me.u)}</b><br><span class="mu">${me.role} · ${sn(suc)}</span></p></div><div class="card"><h3>Cambiar contraseña</h3><input id="pa" type="password" placeholder="Contraseña actual" autocomplete="current-password"><input id="pn" type="password" placeholder="Nueva contraseña (6 o más)" autocomplete="new-password"><input id="pr" type="password" placeholder="Repite la nueva contraseña" autocomplete="new-password" onkeydown="if(event.key=='Enter')chPass()"><button style="width:100%;margin-top:6px" onclick="chPass()">Guardar contraseña</button></div></div>`}
 async function chPass(){const a=$('#pa').value,n=$('#pn').value,r=$('#pr').value;if(n.length<6)return toast('La nueva contraseña debe tener 6 o más caracteres');if(n!==r)return toast('Las contraseñas no coinciden');
- try{if(CLOUD){await rpc('p_pass',{p_u:CRED.u,p_c:a,p_n:n});CRED.p=n}else{const hm=await hs(a,D.ms||'');if(me.role=='Master'){if(hm!==D.mh)throw new Error('Contraseña actual incorrecta');D.mh=await hs(n,D.ms)}else{const x=D.users.find(x=>x.u==me.u);if(!x||!(x.h?x.h===hm:x.p===a))throw new Error('Contraseña actual incorrecta');x.h=await hs(n,D.ms||'');delete x.p}save()}
+ try{if(CLOUD){const pr=await rpc('p_pass',{p_u:CRED.u,p_c:a,p_n:n});if(pr&&pr.ok===false)throw new Error(pr.msg||'Contraseña actual incorrecta');CRED.p=n}else{const hm=await hs(a,D.ms||'');if(me.role=='Master'){if(hm!==D.mh)throw new Error('Contraseña actual incorrecta');D.mh=await hs(n,D.ms)}else{const x=D.users.find(x=>x.u==me.u);if(!x||!(x.h?x.h===hm:x.p===a))throw new Error('Contraseña actual incorrecta');x.h=await hs(n,D.ms||'');delete x.p}save()}
   toast('Contraseña actualizada ✔');draw()}catch(e){toast(e.message)}}
 function rst(i){const u=D.users[i];modal(`<h3>Resetear contraseña</h3><p class="mu">Usuario: <b>${esc(u.u)}</b></p><input id="rp" type="text" placeholder="Nueva contraseña temporal (6 o más)" onkeydown="if(event.key=='Enter')rstOk(${i})"><div class="row"><button class="g" onclick="closeM()">Cancelar</button><button onclick="rstOk(${i})">Guardar</button></div>`);$('#rp').focus()}
 async function rstOk(i){const p=$('#rp').value;if(p.length<6)return toast('Mínimo 6 caracteres');const u=D.users[i];try{if(CLOUD)await rpc('p_admin',{p_u:CRED.u,p_c:CRED.p,p_a:'reset_pass',p_x:{u:u.u,p}});else{u.h=await hs(p,D.ms);delete u.p;save()}closeM();toast('Contraseña restablecida ✔')}catch(e){toast(e.message)}}
@@ -217,7 +217,7 @@ async function cloudLogin(u,p){const k=u.toLowerCase(),a=D.acc[k];
  if(offLocal())return offIn();
  let r;try{r=await rpc('p_login',{p_u:u,p_c:p})}catch(e){if(netErr(e))return offIn();return toast(e.message)}
  if(!r)return toast('Usuario o contraseña incorrectos');
- try{CRED={u:r.u,p};me={u:r.u,role:r.role,suc:r.s};await sync();if(me.role=='Master'&&!me.suc)me.suc=D.sucs[0]?D.sucs[0].id:null;if(!me.suc){me=null;CRED=null;return toast('Tu usuario no tiene sucursal asignada')}
+ try{CRED={u:r.u,p,t:r.t};me={u:r.u,role:r.role,suc:r.s};await sync();if(me.role=='Master'&&!me.suc)me.suc=D.sucs[0]?D.sucs[0].id:null;if(!me.suc){me=null;CRED=null;return toast('Tu usuario no tiene sucursal asignada')}
   suc=me.suc;OFFL=false;await flush();await loadProds();const salt=crypto.randomUUID();D.acc[k]={u:r.u,role:r.role,s:me.suc,salt,h:await pbk(p,salt)};save()}
  catch(e){me=null;CRED=null;if(netErr(e))return offIn();return toast(e.message)}
  view='inicio';cart=[];draw();startTimer()}
@@ -366,6 +366,14 @@ function vCajas(){const L=(CLOUD&&!OFFL?RES:resLocal()).slice().sort((a,b)=>b.op
  <div class="grid3"><div class="card kpi"><small>Total vendido</small><div>${fmt(T.tot)}</div></div><div class="card kpi a"><small>Ventas</small><div>${T.n}</div></div><div class="card kpi b"><small>Cajas abiertas</small><div>${ab}</div></div></div>
  <div class="grid3"><div class="card kpi"><small>Efectivo</small><div>${fmt(T.ef)}</div></div><div class="card kpi"><small>Tarjeta</small><div>${fmt(T.tj)}</div></div><div class="card kpi"><small>Transferencias</small><div>${fmt(T.tr)}</div></div></div>
  <div class="card"><h3>Cajas de ${sn(suc)}</h3><div class="tw"><table><tr><th>Cajero</th><th>Apertura</th><th>Estado</th><th>Ventas</th><th>Efectivo</th><th>Tarjeta</th><th>Transf.</th><th>Total</th></tr>${L.map(c=>`<tr><td>${esc(c.u)}</td><td>${new Date(c.op).toLocaleString('es-CL')}</td><td>${c.cl?'🔒 Cerrada':'🟢 Abierta'}</td><td>${c.n}</td><td>${fmt(c.ef)}</td><td>${fmt(c.tj)}</td><td>${fmt(c.tr)}</td><td><b>${fmt(c.tot)}</b></td></tr>`).join('')||'<tr><td class="mu">Sin cajas en este período</td></tr>'}</table></div></div>`}
+/* ---- v6: sesión con token (la contraseña solo viaja al iniciar sesión) ---- */
+async function rpc(f,a,retry){
+ if(CRED&&CRED.t&&f!='p_login'&&f!='p_pass'&&a.p_c!==undefined)a={...a,p_c:CRED.t};
+ let r;try{r=await fetch(SB_URL+'/rest/v1/rpc/'+f,{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(a)})}catch(e){throw Object.assign(new Error('Sin conexión con el servidor'),{net:1})}
+ if(!r.ok){let m='Error de conexión con el servidor';try{m=(await r.json()).message||m}catch(e){}
+  if(!retry&&f!='p_login'&&CRED&&CRED.p&&/Sesi[oó]n expirada/i.test(m)){const l=await rpc('p_login',{p_u:CRED.u,p_c:CRED.p},true);if(l&&l.t){CRED.t=l.t;return rpc(f,a,true)}}
+  throw Object.assign(new Error(m),{net:r.status>=500||r.status==402||r.status==429||r.status==408})}
+ const t=await r.text();return t?JSON.parse(t):null}
 const DEN=[20000,10000,5000,2000,1000,500,100,50,10];
 function cur(){return D.cajas.find(c=>c.s==suc&&!c.cl&&c.u==me.u)}
 function sm(c){const v=D.sales.filter(s=>s.cj==c.id),f=m=>v.filter(s=>s.m==m).reduce((a,s)=>a+s.tot,0);return{n:v.length,ef:f('Efectivo'),tj:f('Tarjeta'),tr:f('Transferencia'),tot:v.reduce((a,s)=>a+s.tot,0)}}
