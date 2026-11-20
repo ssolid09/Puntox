@@ -47,9 +47,9 @@ async function hs(p,s){const b=await crypto.subtle.digest('SHA-256',new TextEnco
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let me=null,suc=null,view='inicio',cart=[],q='';
-const PERM={Master:['inicio','ventas','inventario','clientes','reportes','caja','config','perfil'],Administrador:['inicio','ventas','inventario','clientes','reportes','caja','perfil'],Cajero:['inicio','ventas','clientes','caja','perfil'],Bodeguero:['inicio','inventario','perfil']};
-const NAV={inicio:'Inicio',ventas:'Ventas',inventario:'Inventario',clientes:'Clientes',reportes:'Reportes',caja:'Caja',perfil:'Mi perfil',config:'Configuración'};
-const ICO={inicio:'⌂',ventas:'🛒',inventario:'📦',clientes:'👥',reportes:'📊',caja:'💵',perfil:'🔑',config:'⚙'};
+const PERM={Master:['inicio','ventas','inventario','clientes','reportes','caja','cajas','config','perfil'],Administrador:['inicio','ventas','inventario','clientes','reportes','caja','cajas','perfil'],Cajero:['inicio','ventas','clientes','caja','perfil'],Bodeguero:['inicio','inventario','perfil']};
+const NAV={inicio:'Inicio',ventas:'Ventas',inventario:'Inventario',clientes:'Clientes',reportes:'Reportes',caja:'Caja',cajas:'Totales de cajas',perfil:'Mi perfil',config:'Configuración'};
+const ICO={inicio:'⌂',ventas:'🛒',inventario:'📦',clientes:'👥',reportes:'📊',caja:'💵',cajas:'🧾',perfil:'🔑',config:'⚙'};
 const fmt=n=>'$'+Math.round(n).toLocaleString('es-CL');
 const sn=id=>{const s=D.sucs.find(x=>x.id==id);if(!s)return'—';const l=D.locales.find(x=>x.id==s.l);return esc((l?l.n:'')+' · '+s.n)};
 const toast=m=>{const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2400)};
@@ -68,7 +68,7 @@ function setSuc(v){suc=+v;cart=[];draw()}
 function draw(){
  if(!me){$('#app').innerHTML=`<div class="login"><div class="l">${LOGO(110)}<h1>PUNTO<b>X</b></h1><small style="letter-spacing:.4em">SMART POS</small><p>Tu negocio,<br>en un solo <i>punto.</i></p></div><div class="rr"><div class="card"><h2 style="margin-top:0">Iniciar Sesión</h2><small class="mu">Accede a tu cuenta para continuar</small><input id="lu" placeholder="Usuario" autocomplete="username"><input id="lp" type="password" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key=='Enter')login()"><button style="width:100%;margin-top:8px" onclick="login()">Ingresar</button></div></div></div>`;return}
  const perms=PERM[me.role];if(!perms.includes(view))view='inicio';
- const V={inicio:vInicio,ventas:vVentas,inventario:vInv,clientes:vCli,reportes:vRep,caja:vCaja,perfil:vPerfil,config:vCfg}[view]();
+ const V={inicio:vInicio,ventas:vVentas,inventario:vInv,clientes:vCli,reportes:vRep,caja:vCaja,cajas:vCajas,perfil:vPerfil,config:vCfg}[view]();
  const sel=me.role=='Master'?`<select onchange="setSuc(this.value)">${D.sucs.map(s=>`<option value="${s.id}" ${s.id==suc?'selected':''}>${sn(s.id)}</option>`).join('')}</select>`:`<span class="mu">${sn(suc)}</span>`;
  $('#app').innerHTML=`<div class="app"><nav class="side"><div class="lg">${LOGO(30)}<span>PUNTO<b>X</b></span></div>${perms.map(v=>`<button class="nv ${v==view?'on':''}" onclick="go('${v}')"><span>${ICO[v]}</span>${NAV[v]}</button>`).join('')}</nav><main class="main"><div class="top"><h2>${view=='inicio'?'Dashboard':NAV[view]}</h2><div class="r">${CLOUD?stBadge():''}${sel}<span class="card" style="padding:6px 12px">👤 ${esc(me.u)} · ${me.role}</span><button class="g" onclick="logout()">Salir</button></div></div>${V}</main></div>`;
  const f=$('#sc')||$('#is');if(f)f.focus()}
@@ -233,12 +233,145 @@ if(CLOUD){
 let IP=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();IP=e;const b=$('#inst');if(b)b.style.display=''});
 addEventListener('appinstalled',()=>{IP=null;const b=$('#inst');if(b)b.style.display='none';toast('PuntoX instalada ✔')});
 async function installApp(){if(!IP)return toast('Usa el ícono de instalar en la barra del navegador');IP.prompt();await IP.userChoice;IP=null;const b=$('#inst');if(b)b.style.display='none'}
+/* ===== v4: importación Excel/CSV · ventas, cajas y clientes en Supabase · cajón/impresora USB ===== */
+let LO=0,LS=null,IMP=[];
+const mc=r=>({id:r.id,s:r.sucursal_id,u:r.usuario,op:Date.parse(r.apertura),fo:+r.fondo,cnt:r.conteo||{},g:r.gastos||[],cl:r.cierre?Date.parse(r.cierre):null,tot:+r.total||0,ef:+r.ef||0,tj:+r.tj||0,tr:+r.tr||0,n:r.nventas||0,ex:+r.esperado||0});
+const mv=r=>({id:r.id,n:r.numero,cj:r.caja_id,t:Date.parse(r.fecha),s:r.sucursal_id,u:r.usuario,tot:+r.total,m:r.metodo,c:r.cliente||'',rec:+r.recibido||+r.total,items:r.items});
+function desde(){const d=new Date(),a=new Date(d.getFullYear(),d.getMonth(),1),b=new Date(Date.now()-7*864e5);return (a<b?a:b).toISOString()}
+async function loadOps(){if(OFFL||(suc==LS&&Date.now()-LO<15000))return;
+ try{const A={p_u:CRED.u,p_c:CRED.p,p_s:suc};const [cj,vt,cl]=await Promise.all([rpc('p_cajas_list',A),rpc('p_ventas_list',{...A,p_desde:desde()}),rpc('p_cli_list',A)]);
+  D.cajas=cj.map(r=>{const c=mc(r),o=D.cajas.find(x=>x.id==c.id);if(o&&!c.cl){c.cnt=o.cnt||{};c.g=o.g||[]}return c}).concat(D.cajas.filter(c=>c.pend));
+  D.sales=vt.map(mv).concat(D.sales.filter(s=>s.pend));D.cli=cl.map(x=>({n:x.nombre,t:x.contacto||''}));LS=suc;LO=Date.now();save()}
+ catch(e){if(netErr(e))goOff();else throw e}}
+async function loadProds(){if(OFFL){D.prods=D.inv[suc]||[];return}
+ try{const r=await rpc('p_prod_list',{p_u:CRED.u,p_c:CRED.p,p_s:suc});D.prods=r.map(x=>({id:x.id,c:x.codigo,n:x.nombre,cat:x.categoria||'',prov:x.proveedor||'',u:x.unidad,pr:+x.precio,st:+x.stock,s:x.sucursal_id}));D.inv[suc]=D.prods;save()}
+ catch(e){if(netErr(e)){goOff();D.prods=D.inv[suc]||[]}else throw e}
+ await loadOps()}
+async function flush(){D.map=D.map||{};const Q=D.out;
+ while(Q.length){const o=Q[0],A={p_u:CRED.u,p_c:CRED.p,p_s:o.s};
+  try{if(o.t=='adj')await rpc('p_stock_sync',{...A,p_x:o.x});
+   else if(o.t=='save')await rpc('p_prod_save',{...A,p_x:o.x});
+   else if(o.t=='imp')await rpc('p_prod_import',{...A,p_x:o.x});
+   else if(o.t=='copen'){const r=await rpc('p_caja_abrir',{...A,p_fondo:o.fo,p_usuario:o.u});D.map[o.tmp]=r.id;D.cajas=D.cajas.filter(c=>c.id!=o.tmp)}
+   else if(o.t=='venta'){const x={...o.v,cj:D.map[o.v.cj]||o.v.cj,forzar:true,u:o.v.u};if(x.cj<0)x.cj=null;await rpc('p_venta_reg',{...A,p_x:x});D.sales=D.sales.filter(s=>s.id!=o.lid)}
+   else if(o.t=='cclose'){await rpc('p_caja_cerrar',{...A,p_id:D.map[o.id]||o.id,p_x:o.x});D.cajas=D.cajas.filter(c=>!(c.id==o.id&&c.pend))}
+  }catch(e){return}
+  Q.shift();save()}
+ LO=0}
+async function goOn(){await flush();if(D.out.length)return toast('No se pudieron sincronizar '+D.out.length+' cambios pendientes');await sync();OFFL=false;LO=0;await loadProds();toast('Conexión restablecida ✔');draw()}
+
+if(CLOUD){
+ go=async v=>{view=v;q='';if(!OFFL){try{if(v=='ventas'||v=='inventario')await loadProds();else if(['inicio','caja','reportes','clientes'].includes(v))await loadOps();else if(v=='cajas')await loadRes()}catch(e){}}draw()};
+ openC=async()=>{const v=$('#fo').value,fo=+v;if(v===''||isNaN(fo)||fo<0)return toast('Ingresa el fondo inicial');
+  if(!OFFL){try{const r=await rpc('p_caja_abrir',{p_u:CRED.u,p_c:CRED.p,p_s:suc,p_fondo:fo});const c=mc(r);D.cajas=D.cajas.filter(x=>x.id!=c.id).concat(c);save();toast('Caja abierta');return draw()}catch(e){if(!netErr(e))return toast(e.message);goOff()}}
+  const id=-(D.seq++);D.cajas.push({id,s:suc,u:me.u,op:Date.now(),fo,cnt:{},g:[],cl:null,pend:1});D.out.push({t:'copen',s:suc,tmp:id,fo,u:me.u});save();toast('Caja abierta (sin conexión)');draw()};
+ closeC=async()=>{const c=cur();recalc();if($('#cb').disabled)return toast('La caja debe estar cuadrada para cerrar');
+  if(!OFFL){await flush();if(D.out.length)return toast('Hay '+D.out.length+' cambios pendientes por sincronizar: reintenta en un momento');
+   if(c.id>0){try{const r=await rpc('p_caja_cerrar',{p_u:CRED.u,p_c:CRED.p,p_s:suc,p_id:c.id,p_x:{cnt:c.cnt,g:c.g}});const nc=mc(r);D.cajas=D.cajas.map(x=>x.id==c.id?nc:x);save();prt(nc.id);return draw()}
+    catch(e){if(!netErr(e)){LO=0;await loadOps().catch(()=>{});draw();return toast(e.message)}goOff()}}}
+  const s=sm(c);Object.assign(c,{cl:Date.now(),tot:s.tot,ef:s.ef,tj:s.tj,tr:s.tr,n:s.n,ex:c.fo+s.ef-gs(c),pend:1});D.out.push({t:'cclose',s:suc,id:c.id,x:{cnt:c.cnt,g:c.g,forzar:true}});save();prt(c.id);draw()};
+ pay=async(m,rec)=>{if(window._b)return;if(!cur())return toast('Abre la caja antes de vender');if(!cart.length)return;window._b=1;
+  const c0=cur(),tot=tt(),items=cart.map(i=>({...i,c:(D.prods.find(p=>p.id==i.id)||{}).c})),cli=($('#cl')||{}).value||'';
+  const v={id:-(D.seq++),n:0,cj:c0.id,t:Date.now(),s:suc,u:me.u,tot,m,c:cli,rec:rec||tot,items},body={cj:c0.id,t:v.t,m,cli,tot,rec:v.rec,items,u:me.u};let done=false;
+  if(!OFFL&&c0.id>0){try{const r=await rpc('p_venta_reg',{p_u:CRED.u,p_c:CRED.p,p_s:suc,p_x:body});v.id=r.id;v.n=r.numero;done=true}
+   catch(e){window._b=0;if(!netErr(e))return toast(e.message.includes('stock')?'Sin stock suficiente: el inventario cambió, actualízalo':e.message);goOff()}}
+  if(!done){v.n=nextN();v.pend=1;D.out.push({t:'venta',s:suc,v:body,lid:v.id})}
+  items.forEach(i=>{const p=D.prods.find(p=>p.id==i.id);if(p)p.st=Math.round((p.st-i.q)*1000)/1000});
+  D.sales.push(v);save();cart=[];window._b=0;showOK(v);printV(v);refresh()};
+ addC=async()=>{const n=$('#cn').value.trim();if(!n)return;if(OFFL)return toast('Agregar clientes requiere conexión');
+  try{await rpc('p_cli_add',{p_u:CRED.u,p_c:CRED.p,p_s:suc,p_x:{n,t:$('#ct').value.trim()}});LO=0;await loadOps();draw()}catch(e){toast(e.message)}};
+}
+
+/* ---- Importar productos (Excel / CSV) ---- */
+const IMPH={c:['codigo','cod','codigodebarras','codigobarras','barcode','ean','sku','code'],n:['nombre','producto','descripcion','detalle','articulo'],pr:['precio','valor','preciounitario','pvp','preciounidad','preciokg'],st:['stock','cantidad','existencia','existencias','inventario','saldo'],cat:['categoria','rubro','familia'],prov:['proveedor','supplier'],u:['unidad','tipo','medida','um','tipodeventa']};
+const nh=h=>String(h).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
+function num(v){if(typeof v=='number')return v;let s=String(v).trim().replace(/[$\s]/g,'');if(s==='')return NaN;if(s.includes(',')&&s.includes('.'))s=s.replace(/\./g,'').replace(',','.');else if(s.includes(','))s=s.replace(',','.');else if(/^\d{1,3}(\.\d{3})+$/.test(s))s=s.replace(/\./g,'');return Number(s)}
+function csvParse(t){const out=[];let r=[],f='',qt=false;const l1=t.split('\n')[0],sep=l1.split(';').length>l1.split(',').length?';':',';
+ for(let i=0;i<t.length;i++){const c=t[i];if(qt){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else qt=false}else f+=c}
+  else if(c=='"')qt=true;else if(c==sep){r.push(f);f=''}
+  else if(c=='\n'||c=='\r'){if(c=='\r'&&t[i+1]=='\n')i++;r.push(f);f='';if(r.some(x=>x.trim()!==''))out.push(r);r=[]}else f+=c}
+ r.push(f);if(r.some(x=>x.trim()!==''))out.push(r);return out}
+function loadXLSX(){return window.XLSX?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=ok;s.onerror=()=>no(new Error('No se pudo cargar el lector de Excel (¿sin internet?). Guarda el archivo como CSV.'));document.head.appendChild(s)})}
+function impMap(tb){if(!tb.length)throw new Error('El archivo está vacío');const H=tb[0].map(nh),ix={};for(const k in IMPH)ix[k]=H.findIndex(h=>IMPH[k].includes(h));
+ if(ix.c<0||ix.n<0||ix.pr<0)throw new Error('Faltan columnas: se necesitan codigo, nombre y precio');
+ const ok=new Map(),err=[];
+ tb.slice(1).forEach((r,i)=>{const g=k=>ix[k]>=0&&r[ix[k]]!=null?r[ix[k]]:'',c=String(g('c')).trim(),n=String(g('n')).trim();if(!c&&!n&&String(g('pr')).trim()==='')return;
+  const pr=num(g('pr')),sv=String(g('st')).trim(),st=sv===''?0:num(sv);
+  if(!c||!n)return err.push('Fila '+(i+2)+': falta código o nombre');if(!(pr>=0))return err.push('Fila '+(i+2)+': precio inválido');if(!(st>=0))return err.push('Fila '+(i+2)+': stock inválido');
+  ok.set(c,{c,n,pr,st,cat:String(g('cat')).trim(),prov:String(g('prov')).trim(),u:/kg|kilo|peso|granel/i.test(String(g('u')))?'kg':'un'})});
+ return{ok:[...ok.values()],err}}
+async function impRead(el){const f=el.files[0];if(!f)return;el.value='';
+ try{let tb;if(/\.xlsx?$/i.test(f.name)){await loadXLSX();const wb=XLSX.read(await f.arrayBuffer());tb=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''})}
+  else tb=csvParse((await f.text()).replace(/^\uFEFF/,''));
+  impShow(impMap(tb))}catch(e){toast(e.message)}}
+function impShow(r){IMP=r.ok;modal(`<h3>Importar productos</h3><p><b>${r.ok.length}</b> productos válidos${r.err.length?` · <b>${r.err.length}</b> filas con errores`:''}</p>${r.err.length?`<div class="mu" style="max-height:110px;overflow:auto;font-size:12px">${r.err.slice(0,8).map(esc).join('<br>')}${r.err.length>8?'<br>…':''}</div>`:''}<div class="tw"><table>${r.ok.slice(0,5).map(x=>`<tr><td>${esc(x.c)}</td><td>${esc(x.n)}</td><td>${fmt(x.pr)}${x.u=='kg'?'/kg':''}</td><td>${x.st}</td></tr>`).join('')}</table></div><div class="row" style="margin-top:8px"><button class="g" onclick="closeM()">Cancelar</button><button onclick="impDo()" ${r.ok.length?'':'disabled'}>Importar ${r.ok.length}</button></div>`)}
+function upsertLocal(L){L.forEach(x=>{const e=D.prods.find(p=>p.s==suc&&p.c==x.c);e?Object.assign(e,{n:x.n,cat:x.cat,prov:x.prov,u:x.u,pr:x.pr,st:x.st}):D.prods.push({id:D.seq++,c:x.c,n:x.n,cat:x.cat,prov:x.prov,u:x.u,pr:x.pr,st:x.st,s:suc})});if(CLOUD)D.inv[suc]=D.prods;save()}
+function queueImp(L){for(let i=0;i<L.length;i+=400)D.out.push({t:'imp',s:suc,x:L.slice(i,i+400)});save()}
+async function impDo(){const L=IMP;closeM();toast('Importando…');
+ try{if(CLOUD&&!OFFL){for(let i=0;i<L.length;i+=400)await rpc('p_prod_import',{p_u:CRED.u,p_c:CRED.p,p_s:suc,p_x:L.slice(i,i+400)});await loadProds()}
+  else{upsertLocal(L);if(CLOUD)queueImp(L)}
+  toast(L.length+' productos importados ✔');draw()}
+ catch(e){if(netErr(e)){goOff();upsertLocal(L);queueImp(L);toast('Sin conexión: se importará al reconectar');draw()}else toast(e.message)}}
+function impTpl(){const t='codigo;nombre;precio;stock;categoria;proveedor;unidad\n7801234500011;Café Premium;3500;50;Bebidas;Distribuidora Sur;un\n2000001;Queso gauda;9500;12,5;Lácteos;Lácteos del Valle;kg\n';const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+t],{type:'text/csv'}));a.download='plantilla-productos.csv';a.click()}
+function impCard(){return `<div class="card" style="margin-top:12px"><h3>Importar productos (Excel o CSV)</h3><p class="mu">Columnas: <b>codigo, nombre, precio, stock</b> y opcionales <b>categoria, proveedor, unidad</b> (un o kg). Si el código ya existe, se actualiza. Usa la hoja 1 del archivo.</p><div class="row"><input id="imf" type="file" accept=".csv,.txt,.xlsx,.xls" onchange="impRead(this)"><button class="g" style="flex:0" onclick="impTpl()">Descargar plantilla</button></div></div>`}
+{const _vi=vInv;vInv=()=>_vi()+impCard()}
+
+/* ---- Impresora térmica y cajón de dinero por USB / puerto serie ---- */
+const HWK='puntox_hw';let HW={mode:'driver',ok:false,name:'',dev:null,ep:0,port:null};
+try{const s=JSON.parse(localStorage.getItem(HWK));if(s&&s.mode)HW.mode=s.mode}catch(e){}
+function hwSave(){try{localStorage.setItem(HWK,JSON.stringify({mode:HW.mode}))}catch(e){}}
+async function usbOpen(d){await d.open();if(d.configuration===null)await d.selectConfiguration(1);let ifc=null,ep=0;
+ for(const i of d.configuration.interfaces)for(const a of i.alternates){const e=a.endpoints.find(x=>x.direction=='out'&&x.type=='bulk');if(e&&(ifc===null||a.interfaceClass==7)){ifc=i.interfaceNumber;ep=e.endpointNumber}}
+ if(ifc===null)throw new Error('No se encontró un puerto de impresión USB en ese dispositivo');
+ await d.claimInterface(ifc);HW.dev=d;HW.ep=ep;HW.name=d.productName||'Impresora USB';HW.ok=true}
+async function hwConnect(){try{
+ if(HW.mode=='usb'){if(!navigator.usb)return toast('Tu navegador no soporta WebUSB: usa Chrome o Edge');const d=await navigator.usb.requestDevice({filters:[]});await usbOpen(d);try{localStorage.setItem('puntox_hwid',JSON.stringify([d.vendorId,d.productId]))}catch(e){}}
+ else{if(!navigator.serial)return toast('Tu navegador no soporta Web Serial: usa Chrome o Edge');const p=await navigator.serial.requestPort();await p.open({baudRate:9600});HW.port=p;HW.ok=true;HW.name='Puerto serie'}
+ toast('Conectado ✔');draw()}
+ catch(e){HW.ok=false;toast(/claim|access|denied|network/i.test(e.message)?'No se pudo abrir: Windows tiene el dispositivo tomado por su driver (revisa la guía del README)':e.message)}}
+async function hwInit(){try{if(HW.mode=='usb'&&navigator.usb){const id=JSON.parse(localStorage.getItem('puntox_hwid')||'null'),ds=await navigator.usb.getDevices(),d=id&&ds.find(x=>x.vendorId==id[0]&&x.productId==id[1]);if(d)await usbOpen(d)}
+ else if(HW.mode=='serial'&&navigator.serial){const ps=await navigator.serial.getPorts();if(ps[0]){await ps[0].open({baudRate:9600});HW.port=ps[0];HW.ok=true;HW.name='Puerto serie'}}}catch(e){}}
+async function hwSend(b){if(HW.mode=='usb')await HW.dev.transferOut(HW.ep,b);else{const w=HW.port.writable.getWriter();try{await w.write(b)}finally{w.releaseLock()}}}
+async function hwPulse(){if(!HW.ok)return toast('Conecta primero la impresora o el cajón');try{await hwSend(new Uint8Array([0x1b,0x70,0,25,250,0x1b,0x70,1,25,250]))}catch(e){toast('No se pudo abrir el cajón: '+e.message)}}
+const ACC={'á':0xA0,'é':0x82,'í':0xA1,'ó':0xA2,'ú':0xA3,'ñ':0xA4,'Ñ':0xA5,'¿':0xA8,'¡':0xAD,'ü':0x81,'Á':0xB5,'É':0x90,'Í':0xD6,'Ó':0xE0,'Ú':0xE9,'°':0xF8,'·':0xFA,'−':0x2D,'—':0x2D};
+function enc(s){const o=[];for(const ch of String(s)){const c=ch.charCodeAt(0);o.push(c<128?c:(ACC[ch]||63))}return o}
+function lineLR(a,b){a=String(a);b=String(b);return a.slice(0,Math.max(0,41-b.length)).padEnd(42-b.length)+b}
+async function rawPrint(lines,drawer){try{const b=[0x1b,0x40];if(drawer)b.push(0x1b,0x70,0,25,250,0x1b,0x70,1,25,250);b.push(0x1b,0x74,2);
+ lines.forEach(l=>{const c=l[0]=='^';b.push(0x1b,0x61,c?1:0,...enc(c?l.slice(1):l),0x0a)});b.push(0x1b,0x61,0,0x0a,0x0a,0x0a,0x1d,0x56,0x42,0x00);await hwSend(new Uint8Array(b))}
+ catch(e){toast('Error de impresión: '+e.message)}}
+const DASH='-'.repeat(42),kgq=i=>i.q.toLocaleString('es-CL',{maximumFractionDigits:3});
+function tkV(v){const L=['^PUNTOX SMART POS','^'+sn(v.s),'^VENTA N° '+String(v.n).padStart(6,'0'),'^'+new Date(v.t).toLocaleString('es-CL'),DASH,lineLR('Cajero',v.u),DASH];
+ v.items.forEach(i=>{L.push(i.n);L.push(lineLR('  '+(i.kg?kgq(i)+' kg x '+fmt(i.pr)+'/kg':i.q+' x '+fmt(i.pr)),fmt(lt(i))))});
+ L.push(DASH,lineLR('TOTAL',fmt(v.tot)),lineLR('Pago',v.m));if(v.m=='Efectivo')L.push(lineLR('Recibido',fmt(v.rec)),lineLR('Vuelto',fmt(v.rec-v.tot)));L.push(DASH,'^¡Gracias por su compra!');return L}
+function tkC(c){const f=t=>new Date(t).toLocaleString('es-CL'),G=c.g||[];let tot=0;
+ const L=['^PUNTOX SMART POS','^'+sn(c.s),'^CIERRE DE CAJA #'+Math.abs(c.id),DASH,lineLR('Cajero',c.u),lineLR('Apertura',f(c.op)),lineLR('Cierre',f(c.cl)),DASH,lineLR('Fondo inicial',fmt(c.fo)),lineLR('Ventas ('+c.n+')',fmt(c.tot)),lineLR(' Efectivo',fmt(c.ef)),lineLR(' Tarjeta',fmt(c.tj)),lineLR(' Transferencia',fmt(c.tr)),DASH,'GASTOS'];
+ G.forEach(g=>L.push(lineLR(g.d,fmt(g.m))));if(!G.length)L.push('Sin gastos');L.push(lineLR('Total gastos',fmt(gs(c))),DASH,'CONTEO');
+ DEN.forEach(d=>{const n=(c.cnt||{})[d];if(n){tot+=n*d;L.push(lineLR(n+' x '+fmt(d),fmt(n*d)))}});
+ L.push(lineLR('Total contado',fmt(tot)),lineLR('Efectivo a cuadrar',fmt(c.ex)),'^'+(tot==c.ex?'CUADRADO':'DIFERENCIA '+fmt(tot-c.ex)),DASH,'^Firma: ______________');return L}
+{const _pv=printV,_pt=prt;
+ printV=v=>{if(HW.mode!='driver'&&HW.ok)rawPrint(tkV(v),v.m=='Efectivo');else _pv(v)};
+ prt=id=>{if(HW.mode!='driver'&&HW.ok)rawPrint(tkC(D.cajas.find(x=>x.id==id)),false);else _pt(id)}}
+function hwTest(){if(!HW.ok)return toast('Conecta primero la impresora');rawPrint(['^PUNTOX SMART POS','^Prueba de impresión',DASH,'Acentos: áéíóú ñ Ñ ¿? ¡!',lineLR('Total de prueba','$12.345'),DASH,'^¡Listo!'],false)}
+function hwCard(){const m=HW.mode;return `<div class="card" style="margin-top:12px"><h3>Impresora y cajón de dinero (este equipo)</h3><select onchange="HW.mode=this.value;hwSave();hwInit().then(draw)"><option value="driver" ${m=='driver'?'selected':''}>Driver del sistema (diálogo de impresión)</option><option value="usb" ${m=='usb'?'selected':''}>USB directo (WebUSB)</option><option value="serial" ${m=='serial'?'selected':''}>Puerto serie (Web Serial)</option></select>${m=='driver'?'<p class="mu">Imprime con el diálogo del sistema. Para abrir el cajón, activa “abrir cajón al imprimir” en el driver de la impresora.</p>':`<p class="mu">${HW.ok?'✅ Conectado: '+esc(HW.name):'⚠ Sin conectar'} · Imprime el ticket y abre el cajón sin diálogos.</p><div class="row"><button onclick="hwConnect()">Conectar</button><button class="g" onclick="hwPulse()">Probar cajón</button><button class="g" onclick="hwTest()">Imprimir prueba</button></div>`}</div>`}
+{const _vp=vPerfil;vPerfil=()=>_vp()+hwCard()}
+hwInit();
+/* ---- Totales de cajas de la sucursal (Master y Administrador) ---- */
+let RES=[],RP='hoy';
+function rdesde(){const d=new Date();if(RP=='7d')d.setDate(d.getDate()-6);else if(RP=='mes')d.setDate(1);d.setHours(0,0,0,0);return d.toISOString()}
+async function loadRes(){if(OFFL)return;try{const r=await rpc('p_cajas_resumen',{p_u:CRED.u,p_c:CRED.p,p_s:suc,p_desde:rdesde()});RES=r.map(x=>({id:x.id,u:x.usuario,op:Date.parse(x.apertura),cl:x.cierre?Date.parse(x.cierre):null,fo:+x.fondo,n:+x.n,tot:+x.total,ef:+x.ef,tj:+x.tj,tr:+x.tr}))}catch(e){if(netErr(e))goOff();else throw e}}
+async function setRP(v){RP=v;if(CLOUD&&!OFFL){try{await loadRes()}catch(e){toast(e.message)}}draw()}
+function resLocal(){const d=new Date(rdesde()).getTime();return D.cajas.filter(c=>c.s==suc&&(!c.cl||c.op>=d)).map(c=>{const s=sm(c);return{id:c.id,u:c.u,op:c.op,cl:c.cl,fo:c.fo,n:s.n,tot:s.tot,ef:s.ef,tj:s.tj,tr:s.tr}})}
+function vCajas(){const L=(CLOUD&&!OFFL?RES:resLocal()).slice().sort((a,b)=>b.op-a.op),T=L.reduce((a,c)=>({n:a.n+c.n,tot:a.tot+c.tot,ef:a.ef+c.ef,tj:a.tj+c.tj,tr:a.tr+c.tr}),{n:0,tot:0,ef:0,tj:0,tr:0}),ab=L.filter(c=>!c.cl).length;
+ return `<div class="row" style="margin-bottom:10px">${[['hoy','Hoy'],['7d','Últimos 7 días'],['mes','Este mes']].map(p=>`<button class="chip ${RP==p[0]?'on':''}" style="flex:0" onclick="setRP('${p[0]}')">${p[1]}</button>`).join('')}</div>${CLOUD&&OFFL?'<p class="mu">Sin conexión: solo se muestran las cajas de este equipo.</p>':''}
+ <div class="grid3"><div class="card kpi"><small>Total vendido</small><div>${fmt(T.tot)}</div></div><div class="card kpi a"><small>Ventas</small><div>${T.n}</div></div><div class="card kpi b"><small>Cajas abiertas</small><div>${ab}</div></div></div>
+ <div class="grid3"><div class="card kpi"><small>Efectivo</small><div>${fmt(T.ef)}</div></div><div class="card kpi"><small>Tarjeta</small><div>${fmt(T.tj)}</div></div><div class="card kpi"><small>Transferencias</small><div>${fmt(T.tr)}</div></div></div>
+ <div class="card"><h3>Cajas de ${sn(suc)}</h3><div class="tw"><table><tr><th>Cajero</th><th>Apertura</th><th>Estado</th><th>Ventas</th><th>Efectivo</th><th>Tarjeta</th><th>Transf.</th><th>Total</th></tr>${L.map(c=>`<tr><td>${esc(c.u)}</td><td>${new Date(c.op).toLocaleString('es-CL')}</td><td>${c.cl?'🔒 Cerrada':'🟢 Abierta'}</td><td>${c.n}</td><td>${fmt(c.ef)}</td><td>${fmt(c.tj)}</td><td>${fmt(c.tr)}</td><td><b>${fmt(c.tot)}</b></td></tr>`).join('')||'<tr><td class="mu">Sin cajas en este período</td></tr>'}</table></div></div>`}
 const DEN=[20000,10000,5000,2000,1000,500,100,50,10];
-function cur(){return D.cajas.find(c=>c.s==suc&&!c.cl)}
+function cur(){return D.cajas.find(c=>c.s==suc&&!c.cl&&c.u==me.u)}
 function sm(c){const v=D.sales.filter(s=>s.cj==c.id),f=m=>v.filter(s=>s.m==m).reduce((a,s)=>a+s.tot,0);return{n:v.length,ef:f('Efectivo'),tj:f('Tarjeta'),tr:f('Transferencia'),tot:v.reduce((a,s)=>a+s.tot,0)}}
 function gs(c){return c.g.reduce((a,g)=>a+g.m,0)}
 function vCaja(){const c=cur();
- const hist=D.cajas.filter(x=>x.s==suc&&x.cl).slice(-10).reverse().map(x=>`<tr><td>#${x.id}</td><td>${new Date(x.cl).toLocaleString('es-CL')}</td><td>${esc(x.u)}</td><td>${fmt(x.tot)}</td><td><button class="g" onclick="prt(${x.id})">🖨 Reimprimir</button></td></tr>`).join('');
+ const hist=D.cajas.filter(x=>x.s==suc&&x.cl&&x.u==me.u).slice(-10).reverse().map(x=>`<tr><td>#${x.id}</td><td>${new Date(x.cl).toLocaleString('es-CL')}</td><td>${esc(x.u)}</td><td>${fmt(x.tot)}</td><td><button class="g" onclick="prt(${x.id})">🖨 Reimprimir</button></td></tr>`).join('');
  const H=`<div class="card" style="margin-top:12px"><h3>Cierres anteriores</h3><div class="tw"><table>${hist||'<tr><td class="mu">Sin cierres</td></tr>'}</table></div></div>`;
  if(!c)return `<div class="card"><h3>Apertura de caja</h3><p class="mu">${sn(suc)}</p><input id="fo" type="number" placeholder="Fondo inicial en efectivo"><button class="o" style="width:100%;margin-top:6px" onclick="openC()">Abrir caja</button></div>`+H;
  const s=sm(c);
