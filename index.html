@@ -34,6 +34,31 @@ button,.card,.tile{transition:transform .18s ease,box-shadow .18s ease,backgroun
 .pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.pc{text-align:left;background:var(--card);color:var(--tx);border:2px solid var(--bd);padding:12px;position:relative;display:flex;flex-direction:column;gap:6px;min-height:120px}.pc.on{border-color:var(--bl);background:#00a6ff1f}.ic{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#0B1F44}.bd{position:absolute;top:8px;right:8px;background:var(--bl);color:#fff;border-radius:50%;width:22px;height:22px;display:grid;place-items:center;font-size:12px}.lw{background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 6px;font-size:10px}
 .ov{position:fixed;inset:0;background:#0b1f4499;display:grid;place-items:center;z-index:20;padding:16px}.mdl{width:100%;max-width:380px;animation:pop .25s ease}
 body{padding-bottom:46px}#ft{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--nv);color:#cbd5e1;text-align:center;font-size:11px;line-height:1.5;padding:7px 10px calc(7px + env(safe-area-inset-bottom,0px))}#ft a{color:var(--bl);text-decoration:none;font-weight:600}#ft a:hover{text-decoration:underline}.toast{bottom:64px}
+.lbpage{box-sizing:border-box;background:#fff;color:#000}
+.lbpage.l2{width:101.6mm;height:101.6mm;display:flex;flex-direction:column}
+.lbpage.l4{width:101.6mm;height:101.6mm;display:grid;grid-template-columns:50.8mm 50.8mm;grid-template-rows:50.8mm 50.8mm}
+.lbpage.l1{width:101.6mm;height:101.6mm}
+.lb{box-sizing:border-box;overflow:hidden;padding:3mm 4mm;font-family:Montserrat,Arial,Helvetica,sans-serif;color:#000;display:flex;gap:3mm}
+.l2 .lb{height:50.8mm;width:101.6mm;flex-direction:row;align-items:stretch}
+.l4 .lb{height:50.8mm;width:50.8mm;flex-direction:column;justify-content:space-between;padding:2.5mm 3mm;gap:1mm}
+.l1 .lb{height:101.6mm;width:101.6mm;flex-direction:column;justify-content:space-between;padding:6mm 8mm}
+.lbt{display:flex;flex-direction:column;justify-content:space-between;min-width:0;flex:1}
+.lbn{font-weight:700;line-height:1.12;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.l2 .lbn{font-size:14pt}.l4 .lbn{font-size:9pt}.l1 .lbn{font-size:24pt}
+.lbpr{font-weight:800;line-height:1}
+.l2 .lbpr{font-size:30pt}.l4 .lbpr{font-size:17pt}.l1 .lbpr{font-size:56pt}
+.lbpr small{font-size:.4em;font-weight:600}
+.lbk{font-size:7pt;margin-top:.5mm}.l1 .lbk{font-size:12pt}
+.lbb{display:flex;flex-direction:column;justify-content:center}
+.l2 .lbb{width:44mm}.l4 .lbb,.l1 .lbb{width:100%}
+.lbb svg{display:block;width:100%}
+.l2 .lbb svg{height:21mm}.l4 .lbb svg{height:12mm}.l1 .lbb svg{height:30mm}
+.lbd{text-align:center;font-family:'Courier New',monospace;letter-spacing:.3mm;margin-top:.8mm;font-size:8.5pt}.l4 .lbd{font-size:6.5pt}.l1 .lbd{font-size:13pt}
+.lbpage.cut.l2 .lb:first-child{border-bottom:.25mm dashed #888}
+.lbpage.cut.l4 .lb{border-right:.25mm dashed #888;border-bottom:.25mm dashed #888}
+#lb{display:none}
+@page lbl{size:101.6mm 101.6mm;margin:0}
+@media print{body.lbp #lb{display:block!important}body.lbp #tk{display:none!important}.lbpage{page:lbl;break-after:page;page-break-after:always}}
 #tk{display:none}@media print{@page{size:80mm auto;margin:0}body>*:not(#tk){display:none!important}body{background:#fff}#tk{display:block;width:72mm;margin:0 auto;font:12px monospace;color:#000;background:#fff}}@media(max-width:800px){.app{flex-direction:column}.side{width:auto;flex-direction:row;overflow-x:auto;align-items:center}.side .lg{margin:0 8px 0 0}}
 </style></head><body><div id="app"></div><script src="config.js"></script><footer id="ft">Sistema realizado por <b>Santiago Chavez</b> · Todos los derechos reservados · <a href="https://ssantiagochavez.vercel.app/" target="_blank" rel="noopener">ssantiagochavez.vercel.app</a> · <a href="#" onclick="contact();return false">Contacto</a><span id="inst" style="display:none"> · <a href="#" onclick="installApp();return false">⬇ Instalar app</a></span></footer>
 <script>
@@ -96,9 +121,9 @@ function qty(x,d){cart[x].q+=d;const p=D.prods.find(p=>p.id==cart[x].id);if(cart
 function pay(){if(!cur())return toast('Abre la caja antes de vender');const tot=cart.reduce((a,i)=>a+i.pr*i.q,0);cart.forEach(i=>D.prods.find(p=>p.id==i.id).st-=i.q);
  D.sales.push({id:D.seq++,cj:cur().id,t:Date.now(),s:suc,u:me.u,tot,m:$('#pm').value,c:$('#cl').value,items:cart.map(i=>({...i}))});save();cart=[];toast('Venta registrada ✔');draw()}
 
-function vInv(){return `<div class="grid2"><div class="card"><h3>Producto</h3><input id="ic" placeholder="Código de barras (escanea aquí)" onkeydown="if(event.key=='Enter'){event.preventDefault();$('#in').focus()}"><input id="in" placeholder="Nombre"><input id="icat" list="cl2" placeholder="Categoría (opcional)"><select id="iu"><option value="un">Se vende por unidad</option><option value="kg">Se vende por kilo (peso)</option></select><input id="ipv" placeholder="Proveedor (opcional)">${canCost()?'<input id="ico" type="number" step="any" placeholder="Costo de compra (opcional)">':''}<input id="imn" type="number" step="any" placeholder="Stock mínimo para alerta (opcional)"><datalist id="cl2">${[...new Set(P().map(p=>p.cat).filter(Boolean))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist><div class="row"><input id="ip" type="number" step="any" placeholder="Precio (por unidad o por kg)"><input id="ist" type="number" step="any" placeholder="Stock (unid. o kg)"></div><button style="width:100%;margin-top:6px" onclick="saveP()">Guardar producto</button><p class="mu">Si el código ya existe, se actualiza.</p></div>
+function vInv(){return `<div class="grid2"><div class="card"><h3>Producto</h3><input id="ic" placeholder="Código de barras (vacío = crear código interno)" onkeydown="if(event.key=='Enter'){event.preventDefault();$('#in').focus()}"><input id="in" placeholder="Nombre"><input id="icat" list="cl2" placeholder="Categoría (opcional)"><select id="iu"><option value="un">Se vende por unidad</option><option value="kg">Se vende por kilo (peso)</option></select><input id="ipv" placeholder="Proveedor (opcional)">${canCost()?'<input id="ico" type="number" step="any" placeholder="Costo de compra (opcional)">':''}<input id="imn" type="number" step="any" placeholder="Stock mínimo para alerta (opcional)"><datalist id="cl2">${[...new Set(P().map(p=>p.cat).filter(Boolean))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist><div class="row"><input id="ip" type="number" step="any" placeholder="Precio (por unidad o por kg)"><input id="ist" type="number" step="any" placeholder="Stock (unid. o kg)"></div><button style="width:100%;margin-top:6px" onclick="saveP()">Guardar producto</button><p class="mu">Si el código ya existe, se actualiza.</p></div>
  <div class="card"><h3>Inventario</h3><input id="is" placeholder="Escanea o busca…" oninput="q=this.value;$('#tb').innerHTML=rows()" onkeydown="if(event.key=='Enter'){const p=P().find(x=>x.c==this.value.trim());if(p)edit(p.id);else{$('#ic').value=this.value;$('#in').focus()}}"><div class="tw"><table><tr><th>Código</th><th>Producto</th><th>Precio</th><th>Stock</th><th>Proveedor</th>${canCost()?'<th>Costo</th><th>Margen</th>':''}<th></th></tr><tbody id="tb">${rows()}</tbody></table></div></div></div>`}
-function rows(){const v=q.toLowerCase();return P().filter(p=>!v||p.n.toLowerCase().includes(v)||p.c.includes(v)).map(p=>`<tr><td>${esc(p.c)}</td><td>${esc(p.n)}</td><td>${fmt(p.pr)}${p.u=='kg'?'/kg':''}</td><td>${fq(p.st,p)}${p.mn>0&&p.st<=p.mn?' ⚠':''}</td><td>${esc(p.prov||'—')}</td>${canCost()?`<td>${p.co?fmt(p.co):'—'}</td><td>${p.co&&p.pr?Math.round((p.pr-p.co)/p.pr*100)+'%':'—'}</td>`:''}<td><button class="g" onclick="edit(${p.id})">Editar</button> <button class="g" onclick="delP(${p.id})">✕</button></td></tr>`).join('')||'<tr><td class="mu">Sin productos</td></tr>'}
+function rows(){const v=q.toLowerCase();return P().filter(p=>!v||p.n.toLowerCase().includes(v)||p.c.includes(v)).map(p=>`<tr><td>${esc(p.c)}</td><td>${esc(p.n)}</td><td>${fmt(p.pr)}${p.u=='kg'?'/kg':''}</td><td>${fq(p.st,p)}${p.mn>0&&p.st<=p.mn?' ⚠':''}</td><td>${esc(p.prov||'—')}</td>${canCost()?`<td>${p.co?fmt(p.co):'—'}</td><td>${p.co&&p.pr?Math.round((p.pr-p.co)/p.pr*100)+'%':'—'}</td>`:''}<td><button class="g" onclick="edit(${p.id})">Editar</button> <button class="g" title="Etiqueta" onclick="lbOne(${p.id})">🏷</button> <button class="g" onclick="delP(${p.id})">✕</button></td></tr>`).join('')||'<tr><td class="mu">Sin productos</td></tr>'}
 function edit(id){const p=D.prods.find(x=>x.id==id);$('#ic').value=p.c;$('#in').value=p.n;$('#icat').value=p.cat||'';$('#iu').value=p.u||'un';$('#ipv').value=p.prov||'';if($('#ico'))$('#ico').value=p.co||'';$('#imn').value=p.mn||'';$('#ip').value=p.pr;$('#ist').value=p.st;$('#ic').focus()}
 function saveP(){const c=$('#ic').value.trim(),n=$('#in').value.trim(),cat=$('#icat').value.trim(),u=$('#iu').value,prov=$('#ipv').value.trim(),pr=+$('#ip').value,st=+$('#ist').value;if(!c||!n||pr<0||st<0||isNaN(pr)||isNaN(st))return toast('Completa código, nombre, precio y stock');
  const e=P().find(x=>x.c==c);e?Object.assign(e,{n,pr,st,cat,u,prov}):D.prods.push({id:D.seq++,c,n,cat,u,prov,pr,st,s:suc});save();toast('Producto guardado');draw()}
@@ -622,6 +647,56 @@ function mixOk(t){const A={Efectivo:mixV('mxe'),Tarjeta:mixV('mxt'),Transferenci
  if(pg.reduce((a,x)=>a+x.a,0)!=t)return;const rec=A.Efectivo>0?(rc||A.Efectivo):t;closeM();
  if(pg.length==1){pay(pg[0].m,pg[0].m=='Efectivo'?rec:t);return}
  PGX=pg;pay('Mixto',rec);PGX=null}
+/* ===== v13: etiquetas (101,6 x 101,6 mm: 1, 2 o 4 por hoja), códigos EAN-13 y códigos internos ===== */
+let LSEL={},LF='',LCFG={lay:'l2',pos:0,cut:true};
+const EL=['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'],
+ EG=['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'],
+ ER=['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'],
+ EP=['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'];
+function eanOk(c){if(!/^\d{13}$/.test(c))return false;let s=0;for(let i=0;i<12;i++)s+=+c[i]*(i%2?3:1);return (10-s%10)%10==+c[12]}
+function eanCheck(b){let s=0;for(let i=0;i<12;i++)s+=+b[i]*(i%2?3:1);return (10-s%10)%10}
+function eanNorm(c){c=String(c);return /^\d{12}$/.test(c)&&eanOk('0'+c)?'0'+c:c}
+function ean13bits(c){const d=c.split('').map(Number);let s='101';for(let i=1;i<7;i++)s+=(EP[d[0]][i-1]=='L'?EL:EG)[d[i]];s+='01010';for(let i=7;i<13;i++)s+=ER[d[i]];return s+'101'}
+function eanSvg(c){const b=ean13bits(c);let p='',i=0;while(i<b.length){if(b[i]=='1'){let j=i;while(b[j]=='1')j++;p+=`M${i+11} 0h${j-i}v50h-${j-i}z`;i=j}else i++}
+ return `<svg viewBox="0 0 113 50" preserveAspectRatio="none" shape-rendering="crispEdges"><path d="${p}"/></svg>`}
+function nextInternal(){const used=P().map(p=>p.c).filter(c=>/^2\d{12}$/.test(c)).map(c=>+c.slice(1,12));const n=(used.length?Math.max(...used):0)+1,b='2'+String(n).padStart(11,'0');return b+eanCheck(b)}
+function loadBC(){return window.JsBarcode?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js';s.onload=ok;s.onerror=()=>no(new Error('No se pudo cargar el generador de códigos (¿sin internet?). Los códigos EAN-13 sí se imprimen.'));document.head.appendChild(s)})}
+function bcSvg(code){const pc=eanNorm(code);if(eanOk(pc))return eanSvg(pc);
+ if(window.JsBarcode){try{const s=document.createElementNS('http://www.w3.org/2000/svg','svg');JsBarcode(s,String(code),{format:'CODE128',displayValue:false,margin:0,height:50,width:2});s.setAttribute('preserveAspectRatio','none');return s.outerHTML}catch(e){}}return ''}
+function lbCell(p){const kg=p.u=='kg',pc=eanNorm(p.c);
+ return `<div class="lb"><div class="lbt"><div class="lbn">${esc(p.n)}</div><div><div class="lbpr">${fmt(p.pr)}${kg?'<small> /kg</small>':''}</div>${kg?'<div class="lbk">Precio por kilo</div>':''}</div></div><div class="lbb">${bcSvg(p.c)}<div class="lbd">${eanOk(pc)?pc[0]+' '+pc.slice(1,7)+' '+pc.slice(7):esc(p.c)}</div></div></div>`}
+function lbCells(){const per={l1:1,l2:2,l4:4}[LCFG.lay],pos=Math.min(LCFG.pos,per-1),ps=Object.keys(LSEL).map(id=>D.prods.find(p=>p.id==id)).filter(Boolean),cells=Array(pos).fill(null);
+ ps.forEach(p=>{for(let k=0;k<(+LSEL[p.id]||1);k++)cells.push(p)});return{per,cells,n:cells.length-pos,ps}}
+function lbPage(cells){return `<div class="lbpage ${LCFG.lay} ${LCFG.cut?'cut':''}">${cells.map(p=>p?lbCell(p):'<div class="lb"></div>').join('')}</div>`}
+function lbCard(){return `<div class="card" style="margin-top:12px"><h3>Etiquetas de precio y código de barras</h3><p class="mu">Imprime nombre, precio (y precio por kilo en los productos por peso) y código de barras. En etiquetas de 101,6 × 101,6 mm puedes sacar <b>2</b> por etiqueta (mitades) o <b>4</b> (cuartos). Si un producto no trae código, déjalo en blanco al crearlo y el sistema le asigna un código interno que empieza con 2.</p><button onclick="lbOpen()">Seleccionar productos e imprimir…</button></div>`}
+function lbOne(id){LSEL={};LSEL[id]=1;lbOpen()}
+function lbList(){const L=P().filter(p=>!LF||p.n.toLowerCase().includes(LF)||p.c.includes(LF)).slice(0,150);
+ $('#lbl').innerHTML=`<table>${L.map(p=>`<tr><td><input type="checkbox" style="width:auto" ${LSEL[p.id]?'checked':''} onchange="lbSel(${p.id},this.checked)"></td><td>${esc(p.n)}<br><small class="mu">${esc(p.c)}${p.u=='kg'?' · por kilo':''}</small></td><td>${fmt(p.pr)}${p.u=='kg'?'/kg':''}</td><td><input type="number" min="1" max="99" value="${LSEL[p.id]||1}" style="width:64px" onchange="lbCp(${p.id},this.value)"></td></tr>`).join('')||'<tr><td class="mu">Sin productos</td></tr>'}</table>`}
+function lbSel(id,on){if(on)LSEL[id]=LSEL[id]||1;else delete LSEL[id];lbPrev()}
+function lbCp(id,v){LSEL[id]=Math.max(1,Math.min(99,Math.round(+v)||1));if(!$('#lbl input[type=checkbox]:checked'))return;lbPrev()}
+function lbAll(){P().filter(p=>!LF||p.n.toLowerCase().includes(LF)||p.c.includes(LF)).slice(0,150).forEach(p=>LSEL[p.id]=LSEL[p.id]||1);lbList();lbPrev()}
+function lbPrev(){const el=$('#lbpv');if(!el)return;const {per,cells,n,ps}=lbCells(),pages=Math.ceil(cells.length/per)||0;
+ el.innerHTML=`<p class="mu" style="margin:6px 0">${ps.length} producto${ps.length==1?'':'s'} · ${n} etiqueta${n==1?'':'s'} · ${pages} hoja${pages==1?'':'s'} de 101,6 × 101,6 mm. Vista previa de la primera hoja:</p><div style="width:51mm;height:51mm;overflow:hidden;border:1px solid var(--bd)"><div style="transform:scale(.5);transform-origin:top left">${lbPage(cells.slice(0,per))}</div></div>`}
+function lbOpen(){LF='';
+ modal(`<h3>Imprimir etiquetas</h3><div class="row"><select onchange="LCFG.lay=this.value;lbPrev()"><option value="l2" ${LCFG.lay=='l2'?'selected':''}>2 por etiqueta (mitades 101,6 × 50,8 mm)</option><option value="l4" ${LCFG.lay=='l4'?'selected':''}>4 por etiqueta (cuartos 50,8 × 50,8 mm)</option><option value="l1" ${LCFG.lay=='l1'?'selected':''}>1 por etiqueta (101,6 × 101,6 mm)</option></select><select onchange="LCFG.pos=+this.value;lbPrev()"><option value="0">Empezar en la posición 1</option><option value="1">Empezar en la posición 2 (reusar etiqueta a medias)</option><option value="2">Empezar en la posición 3 (solo cuartos)</option><option value="3">Empezar en la posición 4 (solo cuartos)</option></select></div><label style="display:flex;gap:6px;align-items:center;margin:4px 0"><input type="checkbox" style="width:auto" ${LCFG.cut?'checked':''} onchange="LCFG.cut=this.checked;lbPrev()">Línea punteada de corte entre etiquetas</label><input id="lbf" placeholder="Buscar producto o código…" oninput="LF=this.value.toLowerCase();lbList()"><div class="row"><button class="g" onclick="lbAll()">Seleccionar todos los mostrados</button><button class="g" onclick="LSEL={};lbList();lbPrev()">Limpiar</button></div><div id="lbl" class="tw" style="max-height:28vh;overflow:auto"></div><div id="lbpv"></div><div class="row" style="margin-top:8px"><button class="g" onclick="closeM()">Cancelar</button><button onclick="lbPrint()">Imprimir</button></div>`);
+ const m=$('#md .mdl');if(m){m.style.maxWidth='640px';m.style.maxHeight='92vh';m.style.overflow='auto'}lbList();lbPrev();loadBC().then(lbPrev).catch(()=>{})}
+async function lbPrint(){const {per,cells,ps}=lbCells();if(!ps.length)return toast('Selecciona al menos un producto');
+ if(ps.some(p=>!eanOk(eanNorm(p.c)))){try{await loadBC()}catch(e){toast(e.message)}}
+ let box=$('#lb');if(!box){box=document.createElement('div');box.id='lb';document.body.appendChild(box)}
+ const pages=[];for(let i=0;i<cells.length;i+=per)pages.push(cells.slice(i,i+per));box.innerHTML=pages.map(lbPage).join('');
+ closeM();document.body.classList.add('lbp');
+ const done=()=>{document.body.classList.remove('lbp');window.removeEventListener('afterprint',done)};window.addEventListener('afterprint',done);setTimeout(()=>window.print(),200)}
+saveP=async()=>{let c=$('#ic').value.trim();const n=$('#in').value.trim(),pr=+$('#ip').value,st=+$('#ist').value;
+ if(!n||$('#ip').value===''||$('#ist').value===''||pr<0||st<0)return toast('Completa nombre, precio y stock');
+ const mn=+($('#imn').value||0);if(!(mn>=0))return toast('Stock mínimo inválido');
+ let co;if($('#ico')){const cv=$('#ico').value;co=cv===''?0:+cv;if(!(co>=0))return toast('Costo inválido')}
+ let gen=false;
+ if(!c){gen=true;try{c=(CLOUD&&!OFFL)?await rpc('p_next_code',{p_u:CRED.u,p_c:CRED.p,p_s:suc}):nextInternal()}catch(e){c=nextInternal()}}
+ const x={c,n,cat:$('#icat').value.trim(),prov:$('#ipv').value.trim(),u:$('#iu').value,pr,st,mn};if(co!==undefined)x.co=co;
+ const ok=()=>toast(gen?'Producto guardado con código interno '+c:'Producto guardado');
+ if(CLOUD&&!OFFL){try{await rpc('p_prod_save',{p_u:CRED.u,p_c:CRED.p,p_s:suc,p_x:x});await loadProds();ok();return draw()}catch(e){if(!netErr(e))return toast(e.message);goOff()}}
+ upsertLocal([x]);if(CLOUD)D.out.push({t:'save',s:suc,x});save();gen?ok():toast(CLOUD?'Guardado sin conexión: se sincronizará al reconectar':'Producto guardado');draw()};
+{const _vi4=vInv;vInv=()=>_vi4()+lbCard()}
 const DEN=[20000,10000,5000,2000,1000,500,100,50,10];
 function cur(){return D.cajas.find(c=>c.s==suc&&!c.cl&&c.u==me.u)}
 function sm(c){const v=D.sales.filter(s=>s.cj==c.id),f=m=>v.reduce((a,s)=>a+pmAmt(s,m),0);return{n:v.length,ef:f('Efectivo'),tj:f('Tarjeta'),tr:f('Transferencia'),tot:v.reduce((a,s)=>a+s.tot,0)}}
