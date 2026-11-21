@@ -107,7 +107,7 @@ function delP(id){D.prods=D.prods.filter(x=>x.id!=id);save();draw()}
 function vCli(){return `<div class="grid2"><div class="card"><h3>Nuevo cliente</h3><input id="cn" placeholder="Nombre"><input id="ct" placeholder="Teléfono o correo"><button style="width:100%;margin-top:6px" onclick="addC()">Agregar</button></div><div class="card"><h3>Clientes (${D.cli.length})</h3><div class="tw"><table>${D.cli.map(c=>`<tr><td>${esc(c.n)}</td><td class="mu">${esc(c.t)}</td></tr>`).join('')||'<tr><td class="mu">Sin clientes</td></tr>'}</table></div></div></div>`}
 function addC(){const n=$('#cn').value.trim();if(!n)return;D.cli.push({n,t:$('#ct').value.trim()});save();draw()}
 
-function vRep(){const A=S(),M={};A.forEach(s=>M[s.m]=(M[s.m]||0)+s.tot);
+function vRep(){const A=S(),M={};A.forEach(s=>['Efectivo','Tarjeta','Transferencia'].forEach(m=>M[m]=(M[m]||0)+pmAmt(s,m)));
  return `<div class="grid3">${['Efectivo','Tarjeta','Transferencia'].map(m=>`<div class="card kpi"><small>${m}</small><div>${fmt(M[m]||0)}</div></div>`).join('')}</div><div class="card"><h3>Últimas ventas</h3><div class="tw"><table><tr><th>N°</th><th>Fecha</th><th>Usuario</th><th>Pago</th><th>Total</th></tr>${A.slice(-50).reverse().map(s=>`<tr><td>${String(s.n||s.id).padStart(6,'0')}</td><td>${new Date(s.t).toLocaleString('es-CL')}</td><td>${esc(s.u)}</td><td>${s.m}</td><td>${fmt(s.tot)}</td></tr>`).join('')||'<tr><td class="mu">Sin ventas</td></tr>'}</table></div></div>`}
 
 function vCfg(){const lo=D.locales.map(l=>`<option value="${l.id}">${esc(l.n)}</option>`).join('');
@@ -146,7 +146,7 @@ function vVentas(){CATS=['Todos',...new Set(P().map(p=>p.cat).filter(Boolean))];
  return `<div class="pos"><div><input id="sc" placeholder="Busca o escanea un producto" value="${esc(vq)}" oninput="vq=this.value;$('#pg').innerHTML=grid()" onkeydown="if(event.key=='Enter'){scan(this.value);this.value='';vq='';$('#pg').innerHTML=grid()}"><div class="chips">${CATS.map((c,i)=>`<button class="chip ${c==vc?'on':''}" onclick="setCat(${i})">${esc(c)}</button>`).join('')}</div><div id="pg" class="pg">${grid()}</div></div><div class="card cartp" id="cart">${cartH()}</div></div>`}
 function setCat(i){vc=CATS[i];draw()}
 function cartH(){const u=cart.reduce((a,i)=>a+(i.kg?1:i.q),0),ok=cart.length?'':'disabled';
- return `<div class="top" style="margin:0 0 8px"><div><h3 style="margin:0">Venta actual</h3><small class="mu">Ticket #${String(nextN()).padStart(6,'0')} · ${u} productos</small></div><button class="g" onclick="cart=[];refresh()">Vaciar</button></div><div class="cl">${cart.map((i,x)=>`<div class="ci"><div><b>${esc(i.n)}</b><br><small class="mu">${fmt(i.pr)}${i.kg?'/kg':' c/u'}</small></div><div class="qt">${i.kg?`<b>${i.q.toLocaleString('es-CL',{maximumFractionDigits:3})} kg</b><button class="g" onclick="cart.splice(${x},1);refresh()">✕</button>`:`<button class="g" onclick="qty(${x},-1)">−</button><b>${i.q}</b><button class="g" onclick="qty(${x},1)">+</button>`}</div><b>${fmt(lt(i))}</b></div>`).join('')||'<p class="mu">Escanea o toca un producto</p>'}</div><div class="row" style="align-items:end;margin-top:8px"><span>Total</span><span class="tot" style="margin:0;text-align:right">${fmt(tt())}</span></div><select id="cl"><option value="">Cliente (opcional)</option>${D.cli.map(c=>`<option>${esc(c.n)}</option>`).join('')}</select><div class="row"><button class="g" onclick="holdAsk()" ${ok}>⏸ Poner en espera</button><button class="g" onclick="heldOpen()">▶ En espera (${nHeld()})</button></div><button style="width:100%;margin:6px 0" onclick="cash()" ${ok}>Cobrar en Efectivo</button><div class="row"><button class="o" onclick="pay('Tarjeta')" ${ok}>Tarjeta</button><button class="o" onclick="pay('Transferencia')" ${ok}>Transferencia</button></div>`}
+ return `<div class="top" style="margin:0 0 8px"><div><h3 style="margin:0">Venta actual</h3><small class="mu">Ticket #${String(nextN()).padStart(6,'0')} · ${u} productos</small></div><button class="g" onclick="cart=[];refresh()">Vaciar</button></div><div class="cl">${cart.map((i,x)=>`<div class="ci"><div><b>${esc(i.n)}</b><br><small class="mu">${fmt(i.pr)}${i.kg?'/kg':' c/u'}</small></div><div class="qt">${i.kg?`<b>${i.q.toLocaleString('es-CL',{maximumFractionDigits:3})} kg</b><button class="g" onclick="cart.splice(${x},1);refresh()">✕</button>`:`<button class="g" onclick="qty(${x},-1)">−</button><b>${i.q}</b><button class="g" onclick="qty(${x},1)">+</button>`}</div><b>${fmt(lt(i))}</b></div>`).join('')||'<p class="mu">Escanea o toca un producto</p>'}</div><div class="row" style="align-items:end;margin-top:8px"><span>Total</span><span class="tot" style="margin:0;text-align:right">${fmt(tt())}</span></div><select id="cl"><option value="">Cliente (opcional)</option>${D.cli.map(c=>`<option>${esc(c.n)}</option>`).join('')}</select><div class="row"><button class="g" onclick="holdAsk()" ${ok}>⏸ Poner en espera</button><button class="g" onclick="heldOpen()">▶ En espera (${nHeld()})</button></div><button style="width:100%;margin:6px 0" onclick="cash()" ${ok}>Cobrar en Efectivo</button><div class="row"><button class="o" onclick="pay('Tarjeta')" ${ok}>Tarjeta</button><button class="o" onclick="pay('Transferencia')" ${ok}>Transferencia</button><button class="o" onclick="mixAsk()" ${ok}>Mixto</button></div>`}
 function refresh(){const c=$('#cl')?$('#cl').value:'';if($('#pg'))$('#pg').innerHTML=grid();if($('#cart'))$('#cart').innerHTML=cartH();if($('#cl'))$('#cl').value=c;const f=$('#sc');if(f&&!$('#md'))f.focus()}
 function add(id){const p=D.prods.find(x=>x.id==id),i=cart.find(x=>x.id==id);if((i?i.q:0)+1>p.st)return toast('Sin stock suficiente');i?i.q++:cart.push({id,n:p.n,pr:p.pr,q:1});refresh()}
 function qty(x,d){cart[x].q+=d;const p=D.prods.find(p=>p.id==cart[x].id);if(cart[x].q>p.st){cart[x].q=p.st;toast('Sin stock suficiente')}if(cart[x].q<1)cart.splice(x,1);refresh()}
@@ -157,12 +157,12 @@ function cash(){if(!cur())return toast('Abre la caja antes de vender');const t=t
 function chg(t){const r=+$('#rc').value||0;$('#vl').textContent=r>=t?'Vuelto: '+fmt(r-t):(r>0?'Falta: '+fmt(t-r):'Vuelto: $0');$('#okb').disabled=r<t}
 function okCash(t){const r=+$('#rc').value||0;if(r>=t)pay('Efectivo',r)}
 function pay(m,rec){if(!cur())return toast('Abre la caja antes de vender');if(!cart.length)return;const tot=tt();cart.forEach(i=>{const p=D.prods.find(p=>p.id==i.id);p.st=Math.round((p.st-i.q)*1000)/1000});
- const v={id:D.seq++,n:nextN(),cj:cur().id,t:Date.now(),s:suc,u:me.u,tot,m,c:($('#cl')||{}).value||'',rec:rec||tot,items:cart.map(i=>({...i}))};
+ const v={id:D.seq++,n:nextN(),cj:cur().id,t:Date.now(),s:suc,u:me.u,tot,m,c:($('#cl')||{}).value||'',rec:rec||tot,items:cart.map(i=>({...i})),pg:PGX};
  D.sales.push(v);save();cart=[];showOK(v);printV(v);refresh()}
 function showOK(v){modal(`<div style="text-align:center"><div style="font-size:54px">✅</div><h2 style="margin:4px 0">¡Compra exitosa!</h2><p class="mu">Venta N° ${String(v.n).padStart(6,'0')}</p>${v.m=='Efectivo'?`<p>Recibido ${fmt(v.rec)} · Total ${fmt(v.tot)}</p><div class="tot">Vuelto: ${fmt(v.rec-v.tot)}</div>`:`<div class="tot">${fmt(v.tot)}</div><p class="mu">${v.m}</p>`}<button id="nb" class="o" style="width:100%" onclick="closeM();refresh()">Nueva venta</button></div>`);$('#nb').focus()}
 function printV(v){const L=(a,b)=>`<div style="display:flex;justify-content:space-between;gap:6px"><span>${a}</span><span>${b}</span></div>`,hr='<hr style="border:0;border-top:1px dashed #000">';
  let t=$('#tk');if(!t){t=document.createElement('div');t.id='tk';document.body.appendChild(t)}
- t.innerHTML=`<div style="text-align:center"><b>PUNTOX SMART POS</b><br>${sn(v.s)}<br><b>VENTA N° ${String(v.n).padStart(6,'0')}</b><br>${new Date(v.t).toLocaleString('es-CL')}</div>${hr}${L('Cajero',esc(v.u))}${hr}${v.items.map(i=>`<div>${esc(i.n)}</div>`+L((i.kg?i.q.toLocaleString('es-CL',{maximumFractionDigits:3})+' kg x '+fmt(i.pr)+'/kg':i.q+' x '+fmt(i.pr)),fmt(lt(i)))).join('')}${hr}${L('<b>TOTAL</b>','<b>'+fmt(v.tot)+'</b>')}${L('Pago',v.m)}${v.m=='Efectivo'?L('Recibido',fmt(v.rec))+L('Vuelto',fmt(v.rec-v.tot)):''}${hr}<div style="text-align:center">¡Gracias por su compra!</div>`;
+ t.innerHTML=`<div style="text-align:center"><b>PUNTOX SMART POS</b><br>${sn(v.s)}<br><b>VENTA N° ${String(v.n).padStart(6,'0')}</b><br>${new Date(v.t).toLocaleString('es-CL')}</div>${hr}${L('Cajero',esc(v.u))}${hr}${v.items.map(i=>`<div>${esc(i.n)}</div>`+L((i.kg?i.q.toLocaleString('es-CL',{maximumFractionDigits:3})+' kg x '+fmt(i.pr)+'/kg':i.q+' x '+fmt(i.pr)),fmt(lt(i)))).join('')}${hr}${L('<b>TOTAL</b>','<b>'+fmt(v.tot)+'</b>')}${payLinesH(v,L)}${hr}<div style="text-align:center">¡Gracias por su compra!</div>`;
  setTimeout(()=>window.print(),300)}
 function contact(){const C=window.PUNTOX_CONFIG||{},e=C.EMAIL,w=(C.WHATSAPP||'').replace(/\D/g,'');
  modal(`<h3>Contacto</h3><p><b>Santiago Chavez</b><br><span class="mu">Licenciado en Administración de Empresas<br>La Calera, Valparaíso, Chile</span></p><p>🌐 <a href="https://ssantiagochavez.vercel.app/" target="_blank" rel="noopener">ssantiagochavez.vercel.app</a></p>${e?`<p>✉ <a href="mailto:${esc(e)}">${esc(e)}</a></p>`:''}${w?`<p>💬 <a href="https://wa.me/${w}" target="_blank" rel="noopener">WhatsApp +${w}</a></p>`:''}<button style="width:100%" onclick="closeM()">Cerrar</button>`)}
@@ -236,7 +236,7 @@ async function installApp(){if(!IP)return toast('Usa el ícono de instalar en la
 /* ===== v4: importación Excel/CSV · ventas, cajas y clientes en Supabase · cajón/impresora USB ===== */
 let LO=0,LS=null,IMP=[];
 const mc=r=>({id:r.id,s:r.sucursal_id,u:r.usuario,op:Date.parse(r.apertura),fo:+r.fondo,cnt:r.conteo||{},g:r.gastos||[],cl:r.cierre?Date.parse(r.cierre):null,tot:+r.total||0,ef:+r.ef||0,tj:+r.tj||0,tr:+r.tr||0,n:r.nventas||0,ex:+r.esperado||0,devol:+r.devol||0});
-const mv=r=>({id:r.id,n:r.numero,cj:r.caja_id,t:Date.parse(r.fecha),s:r.sucursal_id,u:r.usuario,tot:+r.total,m:r.metodo,c:r.cliente||'',rec:+r.recibido||+r.total,items:r.items,est:r.estado||'ok',dv:r.devueltos||{}});
+const mv=r=>({id:r.id,n:r.numero,cj:r.caja_id,t:Date.parse(r.fecha),s:r.sucursal_id,u:r.usuario,tot:+r.total,m:r.metodo,c:r.cliente||'',rec:+r.recibido||+r.total,items:r.items,est:r.estado||'ok',dv:r.devueltos||{},pg:r.pagos||null});
 function desde(){const d=new Date(),a=new Date(d.getFullYear(),d.getMonth(),1),b=new Date(Date.now()-7*864e5);return (a<b?a:b).toISOString()}
 async function loadOps(){if(OFFL||(suc==LS&&Date.now()-LO<15000))return;
  try{const A={p_u:CRED.u,p_c:CRED.p,p_s:suc};const [cj,vt,cl,dv]=await Promise.all([rpc('p_cajas_list',A),rpc('p_ventas_list',{...A,p_desde:desde()}),rpc('p_cli_list',A),rpc('p_dev_list',{...A,p_desde:desde()}).catch(()=>[])]);
@@ -272,7 +272,7 @@ if(CLOUD){
   const s=sm(c);Object.assign(c,{cl:Date.now(),tot:s.tot,ef:s.ef,tj:s.tj,tr:s.tr,n:s.n,ex:c.fo+s.ef-gs(c),pend:1});D.out.push({t:'cclose',s:suc,id:c.id,x:{cnt:c.cnt,g:c.g,forzar:true}});save();prt(c.id);draw()};
  pay=async(m,rec)=>{if(window._b)return;if(!cur())return toast('Abre la caja antes de vender');if(!cart.length)return;window._b=1;
   const c0=cur(),tot=tt(),items=cart.map(i=>({...i,c:(D.prods.find(p=>p.id==i.id)||{}).c})),cli=($('#cl')||{}).value||'';
-  const v={id:-(D.seq++),n:0,cj:c0.id,t:Date.now(),s:suc,u:me.u,tot,m,c:cli,rec:rec||tot,items},body={cj:c0.id,t:v.t,m,cli,tot,rec:v.rec,items,u:me.u};let done=false;
+  const v={id:-(D.seq++),n:0,cj:c0.id,t:Date.now(),s:suc,u:me.u,tot,m,c:cli,rec:rec||tot,items,pg:PGX},body={cj:c0.id,t:v.t,m,cli,tot,rec:v.rec,items,u:me.u,pg:PGX};let done=false;
   if(!OFFL&&c0.id>0){try{const r=await rpc('p_venta_reg',{p_u:CRED.u,p_c:CRED.p,p_s:suc,p_x:body});v.id=r.id;v.n=r.numero;done=true}
    catch(e){window._b=0;if(!netErr(e))return toast(e.message.includes('stock')?'Sin stock suficiente: el inventario cambió, actualízalo':e.message);goOff()}}
   if(!done){v.n=nextN();v.pend=1;D.out.push({t:'venta',s:suc,v:body,lid:v.id})}
@@ -342,14 +342,14 @@ async function rawPrint(lines,drawer){try{const b=[0x1b,0x40];if(drawer)b.push(0
 const DASH='-'.repeat(42),kgq=i=>i.q.toLocaleString('es-CL',{maximumFractionDigits:3});
 function tkV(v){const L=['^PUNTOX SMART POS','^'+sn(v.s),'^VENTA N° '+String(v.n).padStart(6,'0'),'^'+new Date(v.t).toLocaleString('es-CL'),DASH,lineLR('Cajero',v.u),DASH];
  v.items.forEach(i=>{L.push(i.n);L.push(lineLR('  '+(i.kg?kgq(i)+' kg x '+fmt(i.pr)+'/kg':i.q+' x '+fmt(i.pr)),fmt(lt(i))))});
- L.push(DASH,lineLR('TOTAL',fmt(v.tot)),lineLR('Pago',v.m));if(v.m=='Efectivo')L.push(lineLR('Recibido',fmt(v.rec)),lineLR('Vuelto',fmt(v.rec-v.tot)));L.push(DASH,'^¡Gracias por su compra!');return L}
+ L.push(DASH,lineLR('TOTAL',fmt(v.tot)),...payLinesR(v));L.push(DASH,'^¡Gracias por su compra!');return L}
 function tkC(c){const f=t=>new Date(t).toLocaleString('es-CL'),G=c.g||[];let tot=0;
  const L=['^PUNTOX SMART POS','^'+sn(c.s),'^CIERRE DE CAJA #'+Math.abs(c.id),DASH,lineLR('Cajero',c.u),lineLR('Apertura',f(c.op)),lineLR('Cierre',f(c.cl)),DASH,lineLR('Fondo inicial',fmt(c.fo)),lineLR('Ventas ('+c.n+')',fmt(c.tot)),lineLR(' Efectivo',fmt(c.ef)),lineLR(' Tarjeta',fmt(c.tj)),lineLR(' Transferencia',fmt(c.tr)),lineLR(' Devoluciones (restadas)',fmt(c.devol||0)),DASH,'GASTOS'];
  G.forEach(g=>L.push(lineLR(g.d,fmt(g.m))));if(!G.length)L.push('Sin gastos');L.push(lineLR('Total gastos',fmt(gs(c))),DASH,'CONTEO');
  DEN.forEach(d=>{const n=(c.cnt||{})[d];if(n){tot+=n*d;L.push(lineLR(n+' x '+fmt(d),fmt(n*d)))}});
  L.push(lineLR('Total contado',fmt(tot)),lineLR('Efectivo a cuadrar',fmt(c.ex)),'^'+(tot==c.ex?'CUADRADO':'DIFERENCIA '+fmt(tot-c.ex)),DASH,'^Firma: ______________');return L}
 {const _pv=printV,_pt=prt;
- printV=v=>{if(HW.mode!='driver'&&HW.ok)rawPrint(tkV(v),v.m=='Efectivo');else _pv(v)};
+ printV=v=>{if(HW.mode!='driver'&&HW.ok)rawPrint(tkV(v),cashOf(v)>0);else _pv(v)};
  prt=id=>{if(HW.mode!='driver'&&HW.ok)rawPrint(tkC(D.cajas.find(x=>x.id==id)),false);else _pt(id)}}
 function hwTest(){if(!HW.ok)return toast('Conecta primero la impresora');rawPrint(['^PUNTOX SMART POS','^Prueba de impresión',DASH,'Acentos: áéíóú ñ Ñ ¿? ¡!',lineLR('Total de prueba','$12.345'),DASH,'^¡Listo!'],false)}
 function hwCard(){const m=HW.mode;return `<div class="card" style="margin-top:12px"><h3>Impresora y cajón de dinero (este equipo)</h3><select onchange="HW.mode=this.value;hwSave();hwInit().then(draw)"><option value="driver" ${m=='driver'?'selected':''}>Driver del sistema (diálogo de impresión)</option><option value="usb" ${m=='usb'?'selected':''}>USB directo (WebUSB)</option><option value="serial" ${m=='serial'?'selected':''}>Puerto serie (Web Serial)</option></select>${m=='driver'?'<p class="mu">Imprime con el diálogo del sistema. Para abrir el cajón, activa “abrir cajón al imprimir” en el driver de la impresora.</p>':`<p class="mu">${HW.ok?'✅ Conectado: '+esc(HW.name):'⚠ Sin conectar'} · Imprime el ticket y abre el cajón sin diálogos.</p><div class="row"><button onclick="hwConnect()">Conectar</button><button class="g" onclick="hwPulse()">Probar cajón</button><button class="g" onclick="hwTest()">Imprimir prueba</button></div>`}</div>`}
@@ -403,8 +403,8 @@ async function xlsxSave(name,sheets){
  try{await loadXLSX();const wb=XLSX.utils.book_new();sheets.forEach(([n,rows])=>{const ws=XLSX.utils.json_to_sheet(rows.length?rows:[{'(sin datos)':''}]);if(rows.length)ws['!cols']=colw(rows);XLSX.utils.book_append_sheet(wb,ws,n.slice(0,31))});XLSX.writeFile(wb,name+'.xlsx')}
  catch(e){if(window.XLSX)throw e;toast('No se pudo cargar el generador de Excel: se descargan archivos CSV (ábrelos con Excel)');sheets.forEach(([n,rows],i)=>setTimeout(()=>dlBlob(csvOf(rows),name+'-'+n.replace(/[^a-z0-9]+/gi,'_')+'.csv','text/csv'),i*500))}}
 async function expRun(k){try{const {d1,d2}=xr(),S=sucList(),ts=fdt(Date.now()).replace(' ','_').replace(':',''),sh=[];toast('Preparando archivo…');
- if(k=='ventas'||k=='todo'){const V=[],Dt=[];for(const s of S)for(const v of await getVentas(s,d1,d2)){const f=fdt(v.t),ef=v.m=='Efectivo';
-   V.push({'N° venta':v.n,'Fecha':f,'Sucursal':snp(s),'Cajero':v.u,'Caja N°':v.cj,'Pago':v.m,'Cliente':v.c||'','Total':v.tot,'Estado':v.est=='anulada'?'Anulada':v.est=='parcial'?'Con devolución parcial':'Normal','Recibido':ef?v.rec:'','Vuelto':ef?v.rec-v.tot:''});
+ if(k=='ventas'||k=='todo'){const V=[],Dt=[];for(const s of S)for(const v of await getVentas(s,d1,d2)){const f=fdt(v.t),ef=cashOf(v)>0;
+   V.push({'N° venta':v.n,'Fecha':f,'Sucursal':snp(s),'Cajero':v.u,'Caja N°':v.cj,'Pago':v.pg?v.pg.map(x=>x.m+' '+x.a).join(' + '):v.m,'Cliente':v.c||'','Total':v.tot,'Estado':v.est=='anulada'?'Anulada':v.est=='parcial'?'Con devolución parcial':'Normal','Recibido':ef?v.rec:'','Vuelto':ef?v.rec-cashOf(v):''});
    v.items.forEach(i=>Dt.push({'N° venta':v.n,'Fecha':f,'Sucursal':snp(s),'Código':i.c||'','Producto':i.n,'Cantidad':i.q,'Unidad':i.kg?'kg':'un','Precio unitario':i.pr,'Subtotal':lt(i),'Costo unitario':i.cs==null?'':i.cs,'Utilidad':i.cs==null?'':lt(i)-Math.round(i.cs*i.q)}))}
   sh.push(['Ventas',V],['Detalle de ventas',Dt]);const Dv=[];for(const s of S)(await getDevs(s,d1,d2)).forEach(d=>Dv.push({'N° devolución':d.n,'Fecha':fdt(d.t),'Sucursal':snp(s),'Tipo':d.tipo=='anulacion'?'Anulación':'Devolución','Venta N°':d.vn,'Atendió':d.u,'Reembolso':d.rf,'Total':d.tot,'Motivo':d.mot,'Vuelve al stock':d.rs?'Sí':'No'}));sh.push(['Devoluciones',Dv])}
  if(k=='cierres'||k=='todo'){const C=[],G=[];for(const s of S)for(const c of await getCajas(s,d1,d2)){const g=c.g||[],gt=g.reduce((a,x)=>a+(+x.m||0),0);let ct=0;DEN.forEach(d=>ct+=((c.cnt||{})[d]||0)*d);
@@ -529,9 +529,9 @@ function effSale(v){const dv=v.dv||{},L=[];let net=0;
   net+=a;L.push({k,n:i.n,q,kg:!!i.kg,a,c:cs>0?Math.round(cs*q):0,sc:cs>0?a:0})});
  return{L,net,ret:Math.max(0,v.tot-net)}}
 function agg(V){const o={n:0,tot:0,ret:0,un:0,c:0,sc:0,pm:{Efectivo:0,Tarjeta:0,Transferencia:0},P:{},C:{},H:Array(24).fill(0),Hn:Array(24).fill(0),Dd:{}};
- V.forEach(v=>{const e=effSale(v);o.ret+=e.ret;if(!e.L.length)return;o.n++;o.tot+=e.net;o.pm[v.m]=(o.pm[v.m]||0)+e.net;
+ V.forEach(v=>{const e=effSale(v);o.ret+=e.ret;if(!e.L.length)return;o.n++;o.tot+=e.net;payShare(v,e.net,o.pm);
   const h=new Date(v.t).getHours(),dk=fdt(v.t).slice(0,10),c=o.C[v.u]=o.C[v.u]||{n:0,tot:0,ef:0,tj:0,tr:0};
-  c.n++;c.tot+=e.net;if(v.m=='Efectivo')c.ef+=e.net;else if(v.m=='Tarjeta')c.tj+=e.net;else c.tr+=e.net;
+  c.n++;c.tot+=e.net;{const sh={Efectivo:0,Tarjeta:0,Transferencia:0};payShare(v,e.net,sh);c.ef+=sh.Efectivo;c.tj+=sh.Tarjeta;c.tr+=sh.Transferencia}
   o.H[h]+=e.net;o.Hn[h]++;const d=o.Dd[dk]=o.Dd[dk]||{n:0,tot:0};d.n++;d.tot+=e.net;
   e.L.forEach(l=>{o.un+=l.kg?1:l.q;o.c+=l.c;o.sc+=l.sc;const p=o.P[l.k]=o.P[l.k]||{n:l.n,q:0,a:0,c:0,sc:0,kg:l.kg};p.q+=l.q;p.a+=l.a;p.c+=l.c;p.sc+=l.sc})});
  return o}
@@ -598,9 +598,33 @@ function heldTake(id){const h=D.held.find(x=>x.id==id);if(!h)return;if(cart.leng
  toast(out.length?('Ajustado: '+out.join(', ')).slice(0,140):'Venta retomada ▶')}
 function heldDrop(id){D.held=D.held.filter(x=>x.id!=id);save();heldOpen()}
 {const _cc=closeC;closeC=async()=>{const n=nHeld();if(n)return toast('Tienes '+n+' venta'+(n>1?'s':'')+' en espera: retómalas o descártalas antes de cerrar la caja');return _cc()}}
+/* ===== v12: pago mixto ===== */
+let PGX=null;
+function pmAmt(s,m){return s.pg?((s.pg.find(x=>x.m==m)||{a:0}).a):(s.m==m?s.tot:0)}
+function cashOf(v){return pmAmt(v,'Efectivo')}
+function payShare(v,net,pm){if(v.pg&&v.tot){v.pg.forEach(x=>{pm[x.m]=(pm[x.m]||0)+Math.round(x.a*net/v.tot)})}else pm[v.m]=(pm[v.m]||0)+net}
+function payLinesH(v,L){if(!v.pg)return L('Pago',v.m)+(v.m=='Efectivo'?L('Recibido',fmt(v.rec))+L('Vuelto',fmt(v.rec-v.tot)):'');
+ return v.pg.map(x=>L(x.m,fmt(x.a))).join('')+(cashOf(v)>0?L('Efectivo recibido',fmt(v.rec))+L('Vuelto',fmt(v.rec-cashOf(v))):'')}
+function payLinesR(v){if(!v.pg){const L=[lineLR('Pago',v.m)];if(v.m=='Efectivo')L.push(lineLR('Recibido',fmt(v.rec)),lineLR('Vuelto',fmt(v.rec-v.tot)));return L}
+ const L=v.pg.map(x=>lineLR(x.m,fmt(x.a)));if(cashOf(v)>0)L.push(lineLR('Efectivo recibido',fmt(v.rec)),lineLR('Vuelto',fmt(v.rec-cashOf(v))));return L}
+function showOK(v){const cs=cashOf(v),ch=v.rec-cs;
+ modal(`<div style="text-align:center"><div style="font-size:54px">✅</div><h2 style="margin:4px 0">¡Compra exitosa!</h2><p class="mu">Venta N° ${String(v.n).padStart(6,'0')}</p>${v.pg?`<p>${v.pg.map(x=>x.m+' '+fmt(x.a)).join(' + ')}</p>`:''}${cs>0?`<p>Efectivo recibido ${fmt(v.rec)} · A pagar en efectivo ${fmt(cs)}</p><div class="tot">Vuelto: ${fmt(ch)}</div>`:`<div class="tot">${fmt(v.tot)}</div><p class="mu">${v.m}</p>`}<button id="nb" class="o" style="width:100%" onclick="closeM();refresh()">Nueva venta</button></div>`);$('#nb').focus()}
+function mixV(id){return Math.round(+($('#'+id).value)||0)}
+function mixAsk(){if(!cart.length)return;if(!cur())return toast('Abre la caja antes de vender');const t=tt();
+ modal(`<h3>Pago mixto</h3><div class="tot">Total: ${fmt(t)}</div>${[['mxe','Efectivo'],['mxt','Tarjeta'],['mxr','Transferencia']].map(([id,n])=>`<div class="row" style="align-items:center;flex-wrap:nowrap"><label style="flex:0 0 105px">${n}</label><input id="${id}" type="number" min="0" inputmode="numeric" placeholder="0" oninput="mixChg(${t})"><button class="g" style="flex:0;white-space:nowrap" onclick="mixRest('${id}',${t})">Resto</button></div>`).join('')}<div id="mxc" style="display:none"><input id="mxv" type="number" min="0" inputmode="numeric" placeholder="Efectivo recibido del cliente (opcional)" oninput="mixChg(${t})"><div id="mxq" class="mu"></div></div><div id="mxs" class="tot" style="font-size:20px">Falta: ${fmt(t)}</div><div class="row"><button class="g" onclick="closeM();refresh()">Cancelar</button><button id="mxb" disabled onclick="mixOk(${t})">Confirmar y cobrar</button></div>`);$('#mxe').focus()}
+function mixRest(id,t){const o=['mxe','mxt','mxr'].filter(x=>x!=id).reduce((a,x)=>a+mixV(x),0);$('#'+id).value=Math.max(0,t-o);mixChg(t)}
+function mixChg(t){const e=mixV('mxe'),s=e+mixV('mxt')+mixV('mxr'),rem=t-s,rc=mixV('mxv');
+ $('#mxc').style.display=e>0?'':'none';
+ if(e>0)$('#mxq').textContent=rc>0?(rc>=e?'Vuelto: '+fmt(rc-e):'El efectivo recibido es menor al monto en efectivo'):'Si el cliente paga con un billete mayor, ingrésalo para calcular el vuelto';
+ $('#mxs').textContent=rem>0?'Falta: '+fmt(rem):rem<0?'Sobra: '+fmt(-rem):'✔ Cuadra';
+ $('#mxb').disabled=!(rem==0&&s>0&&(rc==0||rc>=e))}
+function mixOk(t){const A={Efectivo:mixV('mxe'),Tarjeta:mixV('mxt'),Transferencia:mixV('mxr')},rc=mixV('mxv'),pg=Object.entries(A).filter(x=>x[1]>0).map(x=>({m:x[0],a:x[1]}));
+ if(pg.reduce((a,x)=>a+x.a,0)!=t)return;const rec=A.Efectivo>0?(rc||A.Efectivo):t;closeM();
+ if(pg.length==1){pay(pg[0].m,pg[0].m=='Efectivo'?rec:t);return}
+ PGX=pg;pay('Mixto',rec);PGX=null}
 const DEN=[20000,10000,5000,2000,1000,500,100,50,10];
 function cur(){return D.cajas.find(c=>c.s==suc&&!c.cl&&c.u==me.u)}
-function sm(c){const v=D.sales.filter(s=>s.cj==c.id),f=m=>v.filter(s=>s.m==m).reduce((a,s)=>a+s.tot,0);return{n:v.length,ef:f('Efectivo'),tj:f('Tarjeta'),tr:f('Transferencia'),tot:v.reduce((a,s)=>a+s.tot,0)}}
+function sm(c){const v=D.sales.filter(s=>s.cj==c.id),f=m=>v.reduce((a,s)=>a+pmAmt(s,m),0);return{n:v.length,ef:f('Efectivo'),tj:f('Tarjeta'),tr:f('Transferencia'),tot:v.reduce((a,s)=>a+s.tot,0)}}
 function gs(c){return c.g.reduce((a,g)=>a+g.m,0)}
 function vCaja(){const c=cur();
  const hist=D.cajas.filter(x=>x.s==suc&&x.cl&&x.u==me.u).slice(-10).reverse().map(x=>`<tr><td>#${x.id}</td><td>${new Date(x.cl).toLocaleString('es-CL')}</td><td>${esc(x.u)}</td><td>${fmt(x.tot)}</td><td><button class="g" onclick="prt(${x.id})">🖨 Reimprimir</button></td></tr>`).join('');
