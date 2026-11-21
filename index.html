@@ -47,9 +47,9 @@ async function hs(p,s){const b=await crypto.subtle.digest('SHA-256',new TextEnco
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let me=null,suc=null,view='inicio',cart=[],q='';
-const PERM={Master:['inicio','ventas','inventario','clientes','reportes','caja','devs','cajas','pedidos','config','perfil'],Administrador:['inicio','ventas','inventario','clientes','reportes','caja','devs','cajas','pedidos','perfil'],Cajero:['inicio','ventas','clientes','caja','devs','perfil'],Bodeguero:['inicio','inventario','pedidos','perfil']};
-const NAV={inicio:'Inicio',ventas:'Ventas',inventario:'Inventario',clientes:'Clientes',reportes:'Reportes',caja:'Caja',devs:'Devoluciones',pedidos:'Pedidos',cajas:'Totales de cajas',perfil:'Mi perfil',config:'Configuración'};
-const ICO={inicio:'⌂',ventas:'🛒',inventario:'📦',clientes:'👥',reportes:'📊',caja:'💵',cajas:'🧾',devs:'↩',pedidos:'📋',perfil:'🔑',config:'⚙'};
+const PERM={Master:['inicio','ventas','inventario','clientes','reportes','caja','devs','cajas','analisis','pedidos','config','perfil'],Administrador:['inicio','ventas','inventario','clientes','reportes','caja','devs','cajas','analisis','pedidos','perfil'],Cajero:['inicio','ventas','clientes','caja','devs','perfil'],Bodeguero:['inicio','inventario','pedidos','perfil']};
+const NAV={inicio:'Inicio',ventas:'Ventas',inventario:'Inventario',clientes:'Clientes',reportes:'Reportes',caja:'Caja',devs:'Devoluciones',pedidos:'Pedidos',analisis:'Análisis',cajas:'Totales de cajas',perfil:'Mi perfil',config:'Configuración'};
+const ICO={inicio:'⌂',ventas:'🛒',inventario:'📦',clientes:'👥',reportes:'📊',caja:'💵',cajas:'🧾',devs:'↩',pedidos:'📋',analisis:'📈',perfil:'🔑',config:'⚙'};
 const fmt=n=>'$'+Math.round(n).toLocaleString('es-CL');
 const sn=id=>{const s=D.sucs.find(x=>x.id==id);if(!s)return'—';const l=D.locales.find(x=>x.id==s.l);return esc((l?l.n:'')+' · '+s.n)};
 const toast=m=>{const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2400)};
@@ -68,7 +68,7 @@ function setSuc(v){suc=+v;cart=[];draw()}
 function draw(){
  if(!me){$('#app').innerHTML=`<div class="login"><div class="l">${LOGO(110)}<h1>PUNTO<b>X</b></h1><small style="letter-spacing:.4em">SMART POS</small><p>Tu negocio,<br>en un solo <i>punto.</i></p></div><div class="rr"><div class="card"><h2 style="margin-top:0">Iniciar Sesión</h2><small class="mu">Accede a tu cuenta para continuar</small><input id="lu" placeholder="Usuario" autocomplete="username"><input id="lp" type="password" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key=='Enter')login()"><button style="width:100%;margin-top:8px" onclick="login()">Ingresar</button></div></div></div>`;return}
  const perms=PERM[me.role];if(!perms.includes(view))view='inicio';
- const V={inicio:vInicio,ventas:vVentas,inventario:vInv,clientes:vCli,reportes:vRep,caja:vCaja,devs:vDevs,pedidos:vPedidos,cajas:vCajas,perfil:vPerfil,config:vCfg}[view]();
+ const V={inicio:vInicio,ventas:vVentas,inventario:vInv,clientes:vCli,reportes:vRep,caja:vCaja,devs:vDevs,pedidos:vPedidos,analisis:vAnalisis,cajas:vCajas,perfil:vPerfil,config:vCfg}[view]();
  const sel=me.role=='Master'?`<select onchange="setSuc(this.value)">${D.sucs.map(s=>`<option value="${s.id}" ${s.id==suc?'selected':''}>${sn(s.id)}</option>`).join('')}</select>`:`<span class="mu">${sn(suc)}</span>`;
  $('#app').innerHTML=`<div class="app"><nav class="side"><div class="lg">${LOGO(30)}<span>PUNTO<b>X</b></span></div>${perms.map(v=>`<button class="nv ${v==view?'on':''}" onclick="go('${v}')"><span>${ICO[v]}</span>${NAV[v]}</button>`).join('')}</nav><main class="main"><div class="top"><h2>${view=='inicio'?'Dashboard':NAV[view]}</h2><div class="r">${CLOUD?stBadge():''}${sel}<span class="card" style="padding:6px 12px">👤 ${esc(me.u)} · ${me.role}</span><button class="g" onclick="logout()">Salir</button></div></div>${V}</main></div>`;
  const f=$('#sc')||$('#is');if(f)f.focus()}
@@ -510,6 +510,75 @@ function rentCard(){if(!canCost())return '';const n0=new Date(),m0=new Date(n0.g
  return `<div class="card" style="margin-top:12px"><h3>Rentabilidad por producto · este mes</h3><p class="mu" style="margin:4px 0">Utilidad = venta − costo, solo de los productos con costo registrado. Margen = utilidad / venta. ${T.sc<T.v?'Hay productos vendidos sin costo: complétalo en Inventario.':''}</p><div class="grid3"><div class="card kpi"><small>Ventas con costo</small><div>${fmt(T.sc)}</div></div><div class="card kpi a"><small>Utilidad</small><div>${fmt(T.u)}</div></div><div class="card kpi b"><small>Margen</small><div>${T.sc?Math.round(T.u/T.sc*100)+'%':'—'}</div></div></div><div class="tw"><table><tr><th>Producto</th><th>Cant.</th><th>Venta</th><th>Costo</th><th>Utilidad</th><th>Margen</th></tr>${L.slice(0,40).map(o=>`<tr><td>${esc(o.n)}</td><td>${Math.round(o.q*1000)/1000}</td><td>${fmt(o.v)}</td><td>${o.sc?fmt(o.c):'—'}</td><td>${o.sc?fmt(o.u):'—'}</td><td>${o.sc?Math.round(o.u/o.sc*100)+'%':'—'}</td></tr>`).join('')||'<tr><td class="mu">Sin ventas este mes</td></tr>'}</table></div></div>`}
 {const _vr2=vRep;vRep=()=>_vr2()+rentCard()}
 {const _vi3=vInicio;vInicio=()=>{const n=PERM[me.role].includes('pedidos')?lowList().length:0;return (n?`<div class="card" style="margin-bottom:12px;border-left:5px solid var(--or)">⚠ <b>${n}</b> producto${n>1?'s':''} con stock bajo · <button class="g" onclick="go('pedidos')">Ver pedido</button></div>`:'')+_vi3()}}
+/* ===== v10: análisis de ventas (producto, cajero, hora, comparación de períodos) ===== */
+let AN=null,AN_B=false,AP={p:'mes',c:'prev',d1:'',d2:'',s:'v'};
+function arange(){const p=AP.p,now=new Date(),DAY=864e5,d0=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()};let a1,a2;
+ if(p=='hoy'){a1=d0();a2=a1+DAY}
+ else if(p=='ayer'){a2=d0();a1=a2-DAY}
+ else if(p=='7d'){a2=d0()+DAY;a1=a2-7*DAY}
+ else if(p=='30d'){a2=d0()+DAY;a1=a2-30*DAY}
+ else if(p=='mes'){a1=new Date(now.getFullYear(),now.getMonth(),1).getTime();a2=d0()+DAY}
+ else if(p=='mant'){a1=new Date(now.getFullYear(),now.getMonth()-1,1).getTime();a2=new Date(now.getFullYear(),now.getMonth(),1).getTime()}
+ else{if(!AP.d1||!AP.d2)throw new Error('Elige la fecha desde y hasta');a1=new Date(AP.d1+'T00:00:00').getTime();a2=new Date(AP.d2+'T00:00:00').getTime()+DAY;if(a2<=a1)throw new Error('La fecha hasta debe ser posterior a la desde')}
+ let b=null;const len=a2-a1;
+ if(AP.c=='prev'){if(p=='mes'||p=='mant'){const s=new Date(a1),b1=new Date(s.getFullYear(),s.getMonth()-1,1).getTime(),nm=new Date(s.getFullYear(),s.getMonth(),1).getTime();b=[b1,Math.min(b1+len,nm)]}else b=[a1-len,a1]}
+ else if(AP.c=='yoy'){const sh=t=>{const d=new Date(t);d.setFullYear(d.getFullYear()-1);return d.getTime()};b=[sh(a1),sh(a2)]}
+ return{a:[a1,a2],b}}
+function effSale(v){const dv=v.dv||{},L=[];let net=0;
+ v.items.forEach(i=>{const k=i.c||String(i.id),q=Math.round((i.q-(dv[k]||0))*1000)/1000;if(q<=0)return;const a=lt({pr:i.pr,q}),pr=D.prods.find(p=>(i.c&&p.c==i.c)||p.id==i.id),cs=i.cs!=null?+i.cs:((pr&&pr.co)||0);
+  net+=a;L.push({k,n:i.n,q,kg:!!i.kg,a,c:cs>0?Math.round(cs*q):0,sc:cs>0?a:0})});
+ return{L,net,ret:Math.max(0,v.tot-net)}}
+function agg(V){const o={n:0,tot:0,ret:0,un:0,c:0,sc:0,pm:{Efectivo:0,Tarjeta:0,Transferencia:0},P:{},C:{},H:Array(24).fill(0),Hn:Array(24).fill(0),Dd:{}};
+ V.forEach(v=>{const e=effSale(v);o.ret+=e.ret;if(!e.L.length)return;o.n++;o.tot+=e.net;o.pm[v.m]=(o.pm[v.m]||0)+e.net;
+  const h=new Date(v.t).getHours(),dk=fdt(v.t).slice(0,10),c=o.C[v.u]=o.C[v.u]||{n:0,tot:0,ef:0,tj:0,tr:0};
+  c.n++;c.tot+=e.net;if(v.m=='Efectivo')c.ef+=e.net;else if(v.m=='Tarjeta')c.tj+=e.net;else c.tr+=e.net;
+  o.H[h]+=e.net;o.Hn[h]++;const d=o.Dd[dk]=o.Dd[dk]||{n:0,tot:0};d.n++;d.tot+=e.net;
+  e.L.forEach(l=>{o.un+=l.kg?1:l.q;o.c+=l.c;o.sc+=l.sc;const p=o.P[l.k]=o.P[l.k]||{n:l.n,q:0,a:0,c:0,sc:0,kg:l.kg};p.q+=l.q;p.a+=l.a;p.c+=l.c;p.sc+=l.sc})});
+ return o}
+const dlt=(a,b)=>{if(b==null)return '';if(!b)return a?'<span class="mu">sin datos antes</span>':'';const p=(a-b)/b*100;return `<span style="color:${p>=0?'#16a34a':'#dc2626'}">${p>=0?'▲':'▼'} ${Math.abs(Math.round(p))}%</span>`};
+const pct=(a,b)=>b?Math.round((a-b)/b*1000)/10:'';
+const labP=r=>fdt(r[0]).slice(0,10)+' → '+fdt(r[1]-1).slice(0,10);
+const hrow=h=>String(h).padStart(2,'0')+':00';
+function hrChart(A,B){const W=720,H=190,pl=46,bw=(W-pl)/24,mx=Math.max(1,...A,...(B||[0]));
+ let s=`<svg viewBox="0 0 ${W} ${H+22}" width="100%" role="img" aria-label="Ventas por hora"><text x="2" y="12" font-size="10" fill="#64748b">${fmt(mx)}</text><line x1="${pl}" y1="${H}" x2="${W}" y2="${H}" stroke="#cbd5e1"/>`;
+ for(let h=0;h<24;h++){const x=pl+h*bw,ha=A[h]/mx*H,hb=B?B[h]/mx*H:0;
+  if(B)s+=`<rect x="${x+bw*.1}" y="${H-hb}" width="${bw*.38}" height="${hb}" fill="#94a3b8"><title>${hrow(h)} · antes ${fmt(B[h])}</title></rect>`;
+  s+=`<rect x="${x+(B?bw*.52:bw*.15)}" y="${H-ha}" width="${B?bw*.38:bw*.7}" height="${ha}" fill="#00A6FF"><title>${hrow(h)} · ${fmt(A[h])}</title></rect>`;
+  if(h%2==0)s+=`<text x="${x+bw/2}" y="${H+14}" font-size="10" text-anchor="middle" fill="#64748b">${h}</text>`}
+ return s+'</svg>'}
+function anHtml(N){const {A,B,r}=N,cc=canCost(),tk=o=>o.n?Math.round(o.tot/o.n):0,ut=o=>o.sc-o.c,un2=o=>Math.round(o.un*100)/100;
+ const K=[['Venta neta',fmt(A.tot),B&&fmt(B.tot),dlt(A.tot,B&&B.tot)],['N° de ventas',A.n,B&&B.n,dlt(A.n,B&&B.n)],['Ticket promedio',fmt(tk(A)),B&&fmt(tk(B)),dlt(tk(A),B&&tk(B))],['Productos vendidos',un2(A),B&&un2(B),dlt(A.un,B&&B.un)],['Devoluciones y anulaciones',fmt(A.ret),B&&fmt(B.ret),dlt(A.ret,B&&B.ret)]];
+ if(cc)K.push(['Utilidad (productos con costo)',fmt(ut(A)),B&&fmt(ut(B)),dlt(ut(A),B&&ut(B))]);
+ const kp=K.map(k=>`<div class="card kpi"><small>${k[0]}</small><div>${k[1]}</div>${B?`<small class="mu">antes: ${k[2]} ${k[3]}</small>`:''}</div>`).join('');
+ const pm=['Efectivo','Tarjeta','Transferencia'].map(m=>`<tr><td>${m}</td><td>${fmt(A.pm[m]||0)}</td><td>${A.tot?Math.round((A.pm[m]||0)/A.tot*100):0}%</td>${B?`<td>${fmt(B.pm[m]||0)}</td><td>${dlt(A.pm[m]||0,B.pm[m]||0)}</td>`:''}</tr>`).join('');
+ const pk=A.H.indexOf(Math.max(...A.H)),pico=A.tot?`Hora pico: <b>${hrow(pk)}–${String(pk).padStart(2,'0')}:59</b> · ${fmt(A.H[pk])} en ${A.Hn[pk]} venta${A.Hn[pk]==1?'':'s'}.`:'Sin ventas en el período.';
+ const sk=AP.s,PL=Object.entries(A.P).map(([k,p])=>({k,...p,u:p.sc-p.c})).sort((a,b)=>sk=='q'?b.q-a.q:sk=='u'?b.u-a.u:b.a-a.a).slice(0,50);
+ const prod=PL.map(p=>{const pb=B&&B.P[p.k];return `<tr><td>${esc(p.n)}</td><td>${p.kg?Math.round(p.q*1000)/1000+' kg':p.q}</td><td>${fmt(p.a)}</td><td>${A.tot?Math.round(p.a/A.tot*100):0}%</td>${cc?`<td>${p.sc?fmt(p.u):'—'}</td><td>${p.sc?Math.round(p.u/p.sc*100)+'%':'—'}</td>`:''}${B?`<td>${fmt(pb?pb.a:0)}</td><td>${dlt(p.a,pb?pb.a:0)}</td>`:''}</tr>`}).join('');
+ const CL=Object.entries(A.C).sort((a,b)=>b[1].tot-a[1].tot),caj=CL.map(([u,c])=>{const cb=B&&B.C[u];return `<tr><td>${esc(u)}</td><td>${c.n}</td><td>${fmt(c.tot)}</td><td>${A.tot?Math.round(c.tot/A.tot*100):0}%</td><td>${fmt(Math.round(c.tot/c.n))}</td><td>${fmt(c.ef)}</td><td>${fmt(c.tj)}</td><td>${fmt(c.tr)}</td>${B?`<td>${fmt(cb?cb.tot:0)}</td><td>${dlt(c.tot,cb?cb.tot:0)}</td>`:''}</tr>`}).join('');
+ const DK=Object.keys(A.Dd).sort(),dias=DK.length>1?`<div class="card" style="margin-top:12px"><h3>Por día</h3><div class="tw"><table><tr><th>Día</th><th>Ventas</th><th>Venta neta</th></tr>${DK.map(k=>`<tr><td>${k}</td><td>${A.Dd[k].n}</td><td>${fmt(A.Dd[k].tot)}</td></tr>`).join('')}</table></div></div>`:'';
+ const bh=B?'<th>Antes</th><th>Var.</th>':'';
+ return `<div class="row" style="align-items:center;margin-bottom:8px"><span class="mu" style="flex:3">Período: <b>${labP(r.a)}</b>${r.b?` · comparado con <b>${labP(r.b)}</b>`:''}. Ventas por fecha de venta, ya descontadas devoluciones y anulaciones.</span><button class="o" style="flex:0;white-space:nowrap" onclick="anXls()">Exportar a Excel</button></div>
+ <div class="grid3">${kp}</div>
+ <div class="grid2"><div class="card"><h3>Medios de pago</h3><div class="tw"><table><tr><th>Medio</th><th>Venta</th><th>%</th>${B?'<th>Antes</th><th>Var.</th>':''}</tr>${pm}</table></div></div>
+ <div class="card"><h3>Ventas por hora</h3>${hrChart(A.H,B&&B.H)}<p class="mu" style="margin:4px 0">${B?'<span style="color:#00A6FF">■</span> período actual · <span style="color:#94a3b8">■</span> comparado · ':''}${pico}</p></div></div>
+ <div class="card" style="margin-top:12px"><div class="top" style="margin:0 0 8px"><h3 style="margin:0">Por producto (top 50)</h3><select style="width:auto" onchange="AP.s=this.value;$('#anr').innerHTML=anHtml(AN)"><option value="v" ${sk=='v'?'selected':''}>Ordenar por venta</option><option value="q" ${sk=='q'?'selected':''}>Ordenar por cantidad</option>${cc?`<option value="u" ${sk=='u'?'selected':''}>Ordenar por utilidad</option>`:''}</select></div><div class="tw"><table><tr><th>Producto</th><th>Cant.</th><th>Venta</th><th>%</th>${cc?'<th>Utilidad</th><th>Margen</th>':''}${bh?'<th>Venta antes</th><th>Var.</th>':''}</tr>${prod||'<tr><td class="mu">Sin ventas en el período</td></tr>'}</table></div></div>
+ <div class="card" style="margin-top:12px"><h3>Por cajero</h3><div class="tw"><table><tr><th>Cajero</th><th>Ventas</th><th>Venta neta</th><th>%</th><th>Ticket prom.</th><th>Efectivo</th><th>Tarjeta</th><th>Transf.</th>${B?'<th>Antes</th><th>Var.</th>':''}</tr>${caj||'<tr><td class="mu">Sin ventas en el período</td></tr>'}</table></div></div>${dias}`}
+async function anRun(){if(AN_B)return;AN_B=true;
+ try{const r=arange(),[VA,VB]=await Promise.all([getVentas(suc,r.a[0],r.a[1]),r.b?getVentas(suc,r.b[0],r.b[1]):Promise.resolve([])]);
+  AN={r,A:agg(VA),B:r.b?agg(VB):null,suc};const e=$('#anr');if(e)e.innerHTML=anHtml(AN)}
+ catch(e){const x=$('#anr');if(x)x.innerHTML='<p class="mu">No se pudo calcular.</p>';toast(e.message)}
+ finally{AN_B=false}}
+function anpc(){AP.p=$('#ap').value;const g=AP.p=='rng';$('#ad1').style.display=g?'':'none';$('#ad2').style.display=g?'':'none'}
+function vAnalisis(){if((!AN||AN.suc!=suc)&&!AN_B)setTimeout(anRun,30);const o=(v,t)=>`<option value="${v}" ${AP.p==v?'selected':''}>${t}</option>`,c=(v,t)=>`<option value="${v}" ${AP.c==v?'selected':''}>${t}</option>`,g=AP.p=='rng'?'':'display:none';
+ return `<p class="mu" style="margin:0 0 8px">${sn(suc)}${CLOUD&&OFFL?' · Sin conexión: solo se usan los datos guardados en este equipo':''}</p><div class="card"><div class="row" style="align-items:center"><select id="ap" onchange="anpc()">${o('hoy','Hoy')}${o('ayer','Ayer')}${o('7d','Últimos 7 días')}${o('30d','Últimos 30 días')}${o('mes','Este mes')}${o('mant','Mes anterior')}${o('rng','Rango de fechas…')}</select><input type="date" id="ad1" value="${AP.d1}" style="${g}" onchange="AP.d1=this.value"><input type="date" id="ad2" value="${AP.d2}" style="${g}" onchange="AP.d2=this.value"><select id="ac" onchange="AP.c=this.value">${c('prev','Comparar con el período anterior')}${c('yoy','Comparar con el año pasado')}${c('none','Sin comparación')}</select><button style="flex:0" onclick="anRun()">Calcular</button></div></div><div id="anr" style="margin-top:12px">${AN&&AN.suc==suc?anHtml(AN):'<p class="mu">Calculando…</p>'}</div>`}
+async function anXls(){if(!AN)return;const {A,B,r}=AN,cc=canCost(),la='Período actual ('+labP(r.a)+')',lb=r.b?'Período comparado ('+labP(r.b)+')':null,tk=o=>o.n?Math.round(o.tot/o.n):0,ut=o=>o.sc-o.c;
+ const kp=[['Venta neta',A.tot,B&&B.tot],['N° de ventas',A.n,B&&B.n],['Ticket promedio',tk(A),B&&tk(B)],['Productos vendidos',Math.round(A.un*100)/100,B&&Math.round(B.un*100)/100],['Devoluciones y anulaciones',A.ret,B&&B.ret],...(cc?[['Utilidad (productos con costo)',ut(A),B&&ut(B)]]:[]),['Efectivo',A.pm.Efectivo||0,B&&(B.pm.Efectivo||0)],['Tarjeta',A.pm.Tarjeta||0,B&&(B.pm.Tarjeta||0)],['Transferencia',A.pm.Transferencia||0,B&&(B.pm.Transferencia||0)]];
+ const rs=kp.map(k=>{const o={'Indicador':k[0]};o[la]=k[1];if(lb){o[lb]=k[2];o['Variación %']=pct(k[1],k[2])}return o});
+ const rp=Object.entries(A.P).map(([k,p])=>({k,...p,u:p.sc-p.c})).sort((a,b)=>b.a-a.a).map(p=>{const pb=B&&B.P[p.k],o={'Código':p.k,'Producto':p.n,'Cantidad':Math.round(p.q*1000)/1000,'Unidad':p.kg?'kg':'un','Venta':p.a,'% del total':A.tot?Math.round(p.a/A.tot*1000)/10:0};if(cc){o['Costo']=p.sc?p.c:'';o['Utilidad']=p.sc?p.u:'';o['Margen %']=p.sc?Math.round(p.u/p.sc*1000)/10:''}if(B){o['Venta período comparado']=pb?pb.a:0;o['Variación %']=pct(p.a,pb?pb.a:0)}return o});
+ const rc=Object.entries(A.C).sort((a,b)=>b[1].tot-a[1].tot).map(([u,c])=>{const cb=B&&B.C[u],o={'Cajero':u,'Ventas':c.n,'Venta neta':c.tot,'% del total':A.tot?Math.round(c.tot/A.tot*1000)/10:0,'Ticket promedio':Math.round(c.tot/c.n),'Efectivo':c.ef,'Tarjeta':c.tj,'Transferencias':c.tr};if(B){o['Venta período comparado']=cb?cb.tot:0;o['Variación %']=pct(c.tot,cb?cb.tot:0)}return o});
+ const rh=A.H.map((v,h)=>{const o={'Hora':hrow(h),'Ventas':A.Hn[h],'Venta neta':v};if(B){o['Ventas (comparado)']=B.Hn[h];o['Venta neta (comparado)']=B.H[h]}return o});
+ const rd=Object.keys(A.Dd).sort().map(k=>({'Día':k,'Ventas':A.Dd[k].n,'Venta neta':A.Dd[k].tot}));
+ try{await xlsxSave('puntox-analisis-'+fdt(Date.now()).slice(0,10),[['Resumen',rs],['Por producto',rp],['Por cajero',rc],['Por hora',rh],['Por día',rd]]);toast('Archivo generado ✔')}catch(e){toast(e.message)}}
 const DEN=[20000,10000,5000,2000,1000,500,100,50,10];
 function cur(){return D.cajas.find(c=>c.s==suc&&!c.cl&&c.u==me.u)}
 function sm(c){const v=D.sales.filter(s=>s.cj==c.id),f=m=>v.filter(s=>s.m==m).reduce((a,s)=>a+s.tot,0);return{n:v.length,ef:f('Efectivo'),tj:f('Tarjeta'),tr:f('Transferencia'),tot:v.reduce((a,s)=>a+s.tot,0)}}
