@@ -72,9 +72,9 @@ async function hs(p,s){const b=await crypto.subtle.digest('SHA-256',new TextEnco
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let me=null,suc=null,view='inicio',cart=[],q='';
-const PERM={Master:['inicio','ventas','inventario','clientes','reportes','caja','devs','cajas','analisis','pedidos','config','perfil'],Administrador:['inicio','ventas','inventario','clientes','reportes','caja','devs','cajas','analisis','pedidos','perfil'],Cajero:['inicio','ventas','clientes','caja','devs','perfil'],Bodeguero:['inicio','inventario','pedidos','perfil']};
-const NAV={inicio:'Inicio',ventas:'Ventas',inventario:'Inventario',clientes:'Clientes',reportes:'Reportes',caja:'Caja',devs:'Devoluciones',pedidos:'Pedidos',analisis:'Análisis',cajas:'Totales de cajas',perfil:'Mi perfil',config:'Configuración'};
-const ICO={inicio:'⌂',ventas:'🛒',inventario:'📦',clientes:'👥',reportes:'📊',caja:'💵',cajas:'🧾',devs:'↩',pedidos:'📋',analisis:'📈',perfil:'🔑',config:'⚙'};
+const PERM={Master:['inicio','ventas','inventario','clientes','reportes','caja','devs','cajas','analisis','pedidos','empresas','config','perfil'],Administrador:['inicio','ventas','inventario','clientes','reportes','caja','devs','cajas','analisis','pedidos','perfil'],Cajero:['inicio','ventas','clientes','caja','devs','perfil'],Bodeguero:['inicio','inventario','pedidos','perfil']};
+const NAV={inicio:'Inicio',ventas:'Ventas',inventario:'Inventario',clientes:'Clientes',reportes:'Reportes',caja:'Caja',devs:'Devoluciones',pedidos:'Pedidos',analisis:'Análisis',empresas:'Empresas y licencias',cajas:'Totales de cajas',perfil:'Mi perfil',config:'Configuración'};
+const ICO={inicio:'⌂',ventas:'🛒',inventario:'📦',clientes:'👥',reportes:'📊',caja:'💵',cajas:'🧾',devs:'↩',pedidos:'📋',analisis:'📈',empresas:'🏢',perfil:'🔑',config:'⚙'};
 const fmt=n=>'$'+Math.round(n).toLocaleString('es-CL');
 const sn=id=>{const s=D.sucs.find(x=>x.id==id);if(!s)return'—';const l=D.locales.find(x=>x.id==s.l);return esc((l?l.n:'')+' · '+s.n)};
 const toast=m=>{const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2400)};
@@ -93,7 +93,7 @@ function setSuc(v){suc=+v;cart=[];draw()}
 function draw(){
  if(!me){$('#app').innerHTML=`<div class="login"><div class="l">${LOGO(110)}<h1>PUNTO<b>X</b></h1><small style="letter-spacing:.4em">SMART POS</small><p>Tu negocio,<br>en un solo <i>punto.</i></p></div><div class="rr"><div class="card"><h2 style="margin-top:0">Iniciar Sesión</h2><small class="mu">Accede a tu cuenta para continuar</small><input id="lu" placeholder="Usuario" autocomplete="username"><input id="lp" type="password" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key=='Enter')login()"><button style="width:100%;margin-top:8px" onclick="login()">Ingresar</button></div></div></div>`;return}
  const perms=PERM[me.role];if(!perms.includes(view))view='inicio';
- const V={inicio:vInicio,ventas:vVentas,inventario:vInv,clientes:vCli,reportes:vRep,caja:vCaja,devs:vDevs,pedidos:vPedidos,analisis:vAnalisis,cajas:vCajas,perfil:vPerfil,config:vCfg}[view]();
+ const V={inicio:vInicio,ventas:vVentas,inventario:vInv,clientes:vCli,reportes:vRep,caja:vCaja,devs:vDevs,pedidos:vPedidos,analisis:vAnalisis,empresas:vEmpresas,cajas:vCajas,perfil:vPerfil,config:vCfg}[view]();
  const sel=me.role=='Master'?`<select onchange="setSuc(this.value)">${D.sucs.map(s=>`<option value="${s.id}" ${s.id==suc?'selected':''}>${sn(s.id)}</option>`).join('')}</select>`:`<span class="mu">${sn(suc)}</span>`;
  $('#app').innerHTML=`<div class="app"><nav class="side"><div class="lg">${LOGO(30)}<span>PUNTO<b>X</b></span></div>${perms.map(v=>`<button class="nv ${v==view?'on':''}" onclick="go('${v}')"><span>${ICO[v]}</span>${NAV[v]}</button>`).join('')}</nav><main class="main"><div class="top"><h2>${view=='inicio'?'Dashboard':NAV[view]}</h2><div class="r">${CLOUD?stBadge():''}${sel}<span class="card" style="padding:6px 12px">👤 ${esc(me.u)} · ${me.role}</span><button class="g" onclick="logout()">Salir</button></div></div>${V}</main></div>`;
  const f=$('#sc')||$('#is');if(f)f.focus()}
@@ -136,7 +136,7 @@ function vRep(){const A=S(),M={};A.forEach(s=>['Efectivo','Tarjeta','Transferenc
  return `<div class="grid3">${['Efectivo','Tarjeta','Transferencia'].map(m=>`<div class="card kpi"><small>${m}</small><div>${fmt(M[m]||0)}</div></div>`).join('')}</div><div class="card"><h3>Últimas ventas</h3><div class="tw"><table><tr><th>N°</th><th>Fecha</th><th>Usuario</th><th>Pago</th><th>Total</th></tr>${A.slice(-50).reverse().map(s=>`<tr><td>${String(s.n||s.id).padStart(6,'0')}</td><td>${new Date(s.t).toLocaleString('es-CL')}</td><td>${esc(s.u)}</td><td>${s.m}</td><td>${fmt(s.tot)}</td></tr>`).join('')||'<tr><td class="mu">Sin ventas</td></tr>'}</table></div></div>`}
 
 function vCfg(){const lo=D.locales.map(l=>`<option value="${l.id}">${esc(l.n)}</option>`).join('');
- return `<div class="grid2"><div class="card"><h3>Locales</h3><div class="row"><input id="ln" placeholder="Nombre del local"><button onclick="addL()" style="flex:0">Crear</button></div>${D.locales.map(l=>`<p>${esc(l.n)} ${CLOUD?`${(D.offl||{})[l.id]?'🔴 Sin conexión':'🟢 En línea'} <button class="g" onclick="togL(${l.id})">${(D.offl||{})[l.id]?'Reconectar':'Desconectar'}</button>`:''} <button class="g" onclick="delL(${l.id})">✕</button></p>`).join('')}</div>
+ return `<div class="grid2"><div class="card"><h3>Locales</h3><div class="row"><input id="ln" placeholder="Nombre del local">${(D.emps||[]).length>1?`<select id="le">${D.emps.map(e=>`<option value="${e.id}">${esc(e.n)}</option>`).join('')}</select>`:''}<button onclick="addL()" style="flex:0">Crear</button></div>${D.locales.map(l=>`<p>${esc(l.n)}${l.emp&&(D.emps||[]).length>1?' <span class="mu">('+esc(((D.emps||[]).find(x=>x.id==l.emp)||{}).n||'')+')</span>':''} ${CLOUD?`${(D.offl||{})[l.id]?'🔴 Sin conexión':'🟢 En línea'} <button class="g" onclick="togL(${l.id})">${(D.offl||{})[l.id]?'Reconectar':'Desconectar'}</button>`:''} <button class="g" onclick="delL(${l.id})">✕</button></p>`).join('')}</div>
  <div class="card"><h3>Sucursales</h3><select id="sl">${lo}</select><div class="row"><input id="sn" placeholder="Nombre de la sucursal"><button onclick="addS()" style="flex:0">Crear</button></div>${D.sucs.map(s=>`<p>${sn(s.id)} <button class="g" onclick="delS(${s.id})">✕</button></p>`).join('')}</div></div>
  <div class="grid2" style="margin-top:12px"><div class="card"><h3>Crear usuario</h3><input id="uu" placeholder="Nombre de usuario"><input id="up" type="password" placeholder="Contraseña"><select id="ur"><option>Administrador</option><option>Cajero</option><option>Bodeguero</option></select><select id="ul" onchange="lsel()">${lo}</select><select id="us"></select><button style="width:100%;margin-top:6px" onclick="addU()">Crear usuario</button></div>
  <div class="card"><h3>Usuarios</h3><div class="tw"><table>${D.users.map((u,i)=>`<tr><td>${esc(u.u)}</td><td>${u.role}</td><td><select onchange="asg(${i},this.value)">${D.sucs.map(s=>`<option value="${s.id}" ${s.id==u.s?'selected':''}>${sn(s.id)}</option>`).join('')}</select></td><td><button class="g" onclick="rst(${i})">🔑 Reset</button> <button class="g" onclick="delU(${i})">✕</button></td></tr>`).join('')||'<tr><td class="mu">Solo existe el usuario maestro SACC</td></tr>'}</table></div></div></div>`}
@@ -232,18 +232,18 @@ function goOff(msg){if(OFFL)return;OFFL=true;toast(msg||'Sin conexión con el se
 async function flush(){const q=D.out;while(q.length){const o=q[0];try{if(o.t=='adj')await rpc('p_stock_sync',{p_u:CRED.u,p_c:CRED.p,p_s:o.s,p_x:o.x});else await rpc('p_prod_save',{p_u:CRED.u,p_c:CRED.p,p_s:o.s,p_x:o.x})}catch(e){return}q.shift();save()}}
 async function goOn(){await flush();if(D.out.length)return toast('No se pudieron sincronizar '+D.out.length+' cambios pendientes');await sync();OFFL=false;await loadProds();toast('Conexión restablecida ✔');draw()}
 async function tryOnline(){try{const e=await rpc('p_estado',{p_u:CRED.u,p_c:CRED.p});if(e.off)return toast('El administrador mantiene este local sin conexión');await goOn()}catch(x){toast(netErr(x)?'Aún sin conexión con el servidor':x.message)}}
-async function tick(){if(!me||!CRED)return;try{const e=await rpc('p_estado',{p_u:CRED.u,p_c:CRED.p});if(OFFL){if(!e.off)await goOn()}else if(e.off)goOff('El administrador puso este local en modo sin conexión')}catch(x){if(netErr(x))goOff()}}
+async function tick(){if(!me||!CRED)return;try{const e=await rpc('p_estado',{p_u:CRED.u,p_c:CRED.p});licSet(e);if(OFFL){if(!e.off)await goOn()}else if(e.off)goOff('El administrador puso este local en modo sin conexión')}catch(x){if(netErr(x))goOff()}}
 function startTimer(){if(!TM)TM=setInterval(tick,120000)}
 function stBadge(){return OFFL?`<button class="g" onclick="tryOnline()">🔴 Sin conexión${D.out.length?' · '+D.out.length+' pend.':''} ↻</button>`:'<span class="mu">🟢 En línea</span>'}
 async function cloudLogin(u,p){const k=u.toLowerCase(),a=D.acc[k];
  const offLocal=()=>{if(!a||a.role=='Master')return false;const s=D.sucs.find(x=>x.id==a.s);return !!(s&&D.offl[s.l])};
- const offIn=async()=>{if(!a)return toast('Sin conexión: inicia sesión una vez con internet en este equipo');if(await pbk(p,a.salt)!==a.h)return toast('Usuario o contraseña incorrectos');
-  CRED={u:a.u,p};me={u:a.u,role:a.role,suc:a.s};suc=a.s;OFFL=true;D.prods=D.inv[suc]||[];view='inicio';cart=[];draw();startTimer();toast('Entraste en modo sin conexión')};
+ const offIn=async()=>{if(!a)return toast('Sin conexión: inicia sesión una vez con internet en este equipo');if(await pbk(p,a.salt)!==a.h)return toast('Usuario o contraseña incorrectos');const lk=licOffline(a);if(lk)return toast(lk);
+  CRED={u:a.u,p};me={u:a.u,role:a.role,suc:a.s};suc=a.s;OFFL=true;LICEMP=a.emp||null;D.prods=D.inv[suc]||[];view='inicio';cart=[];draw();startTimer();toast('Entraste en modo sin conexión')};
  if(offLocal())return offIn();
  let r;try{r=await rpc('p_login',{p_u:u,p_c:p})}catch(e){if(netErr(e))return offIn();return toast(e.message)}
  if(!r)return toast('Usuario o contraseña incorrectos');
- try{CRED={u:r.u,p,t:r.t};me={u:r.u,role:r.role,suc:r.s};await sync();if(me.role=='Master'&&!me.suc)me.suc=D.sucs[0]?D.sucs[0].id:null;if(!me.suc){me=null;CRED=null;return toast('Tu usuario no tiene sucursal asignada')}
-  suc=me.suc;OFFL=false;await flush();await loadProds();const salt=crypto.randomUUID();D.acc[k]={u:r.u,role:r.role,s:me.suc,salt,h:await pbk(p,salt)};save()}
+ try{CRED={u:r.u,p,t:r.t};me={u:r.u,role:r.role,suc:r.s};licSet(r);await sync();if(me.role=='Master'&&!me.suc)me.suc=D.sucs[0]?D.sucs[0].id:null;if(!me.suc){me=null;CRED=null;return toast('Tu usuario no tiene sucursal asignada')}
+  suc=me.suc;OFFL=false;await flush();await loadProds();const salt=crypto.randomUUID();D.acc[k]={u:r.u,role:r.role,s:me.suc,salt,h:await pbk(p,salt),emp:r.emp||null};save()}
  catch(e){me=null;CRED=null;if(netErr(e))return offIn();return toast(e.message)}
  view='inicio';cart=[];draw();startTimer()}
 function togL(id){cl('set_offline',{id,v:!D.offl[id]})}
@@ -286,7 +286,7 @@ async function flush(){D.map=D.map||{};const Q=D.out;
 async function goOn(){await flush();if(D.out.length)return toast('No se pudieron sincronizar '+D.out.length+' cambios pendientes');await sync();OFFL=false;LO=0;await loadProds();toast('Conexión restablecida ✔');draw()}
 
 if(CLOUD){
- go=async v=>{view=v;q='';if(!OFFL){try{if(v=='ventas'||v=='inventario'||v=='pedidos')await loadProds();else if(['inicio','caja','reportes','clientes','devs'].includes(v))await loadOps();else if(v=='cajas')await loadRes()}catch(e){}}draw()};
+ go=async v=>{view=v;q='';if(!OFFL){try{if(v=='ventas'||v=='inventario'||v=='pedidos')await loadProds();else if(['inicio','caja','reportes','clientes','devs'].includes(v))await loadOps();else if(v=='cajas')await loadRes();else if(v=='empresas')await loadEmps()}catch(e){}}draw()};
  openC=async()=>{const v=$('#fo').value,fo=+v;if(v===''||isNaN(fo)||fo<0)return toast('Ingresa el fondo inicial');
   if(!OFFL){try{const r=await rpc('p_caja_abrir',{p_u:CRED.u,p_c:CRED.p,p_s:suc,p_fondo:fo});const c=mc(r);D.cajas=D.cajas.filter(x=>x.id!=c.id).concat(c);save();toast('Caja abierta');return draw()}catch(e){if(!netErr(e))return toast(e.message);goOff()}}
   const id=-(D.seq++);D.cajas.push({id,s:suc,u:me.u,op:Date.now(),fo,cnt:{},g:[],cl:null,pend:1});D.out.push({t:'copen',s:suc,tmp:id,fo,u:me.u});save();toast('Caja abierta (sin conexión)');draw()};
@@ -397,7 +397,7 @@ async function rpc(f,a,retry){
  let r;try{r=await fetch(SB_URL+'/rest/v1/rpc/'+f,{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(a)})}catch(e){throw Object.assign(new Error('Sin conexión con el servidor'),{net:1})}
  if(!r.ok){let m='Error de conexión con el servidor';try{m=(await r.json()).message||m}catch(e){}
   if(!retry&&f!='p_login'&&CRED&&CRED.p&&/Sesi[oó]n expirada/i.test(m)){const l=await rpc('p_login',{p_u:CRED.u,p_c:CRED.p},true);if(l&&l.t){CRED.t=l.t;return rpc(f,a,true)}}
-  throw Object.assign(new Error(m),{net:r.status>=500||r.status==402||r.status==429||r.status==408})}
+  if(/^Licencia/.test(m)&&f!='p_login')licBlock(m);throw Object.assign(new Error(m),{net:r.status>=500||r.status==402||r.status==429||r.status==408})}
  const t=await r.text();return t?JSON.parse(t):null}
 /* ===== v7: exportar a Excel y respaldo completo ===== */
 let BK=null;
@@ -697,6 +697,53 @@ saveP=async()=>{let c=$('#ic').value.trim();const n=$('#in').value.trim(),pr=+$(
  if(CLOUD&&!OFFL){try{await rpc('p_prod_save',{p_u:CRED.u,p_c:CRED.p,p_s:suc,p_x:x});await loadProds();ok();return draw()}catch(e){if(!netErr(e))return toast(e.message);goOff()}}
  upsertLocal([x]);if(CLOUD)D.out.push({t:'save',s:suc,x});save();gen?ok():toast(CLOUD?'Guardado sin conexión: se sincronizará al reconectar':'Producto guardado');draw()};
 {const _vi4=vInv;vInv=()=>_vi4()+lbCard()}
+/* ===== v14: empresas y licencias ===== */
+D.lic=D.lic||{};D.emps=D.emps||[];let EMPS=[],LICEMP=null;
+function licSet(r){const L=r&&r.lic;if(!L)return;LICEMP=L.id;D.lic[L.id]={n:L.n,e:L.e,v:L.v,g:L.g||0,op:L.op!==false,od:L.od==null?null:L.od,t:Date.now()};save()}
+function licOffline(a){const L=D.lic[a?a.emp:LICEMP];if(!L)return '';
+ if(L.e!='activa')return 'Licencia suspendida. Contacta al administrador del sistema';
+ if(L.v&&Date.now()>=new Date(L.v+'T00:00:00').getTime()+((L.g||0)+1)*864e5)return 'Licencia vencida. Contacta al administrador del sistema';
+ if(L.op===false)return 'Tu licencia no permite trabajar sin conexión: conéctate a internet';
+ if(L.od!=null&&Date.now()>L.t+L.od*864e5)return 'Pasó el tiempo permitido sin conexión ('+L.od+' días): conéctate a internet';
+ return ''}
+function licBlock(m){if(!me)return;const L=D.lic[LICEMP];if(L&&/suspendida/i.test(m)){L.e='suspendida';save()}
+ me=null;CRED=null;OFFL=false;closeM();draw();modal(`<h3>⛔ Acceso bloqueado</h3><p>${esc(m)}</p><button style="width:100%" onclick="closeM()">Entendido</button>`)}
+function licChip(){if(!me||me.role=='Master')return '';const L=D.lic[LICEMP];if(!L||!L.v)return '';
+ const dd=Math.ceil((new Date(L.v+'T00:00:00').getTime()+864e5-Date.now())/864e5);if(dd>15)return '';
+ const t=dd>0?'Licencia: vence en '+dd+' día'+(dd>1?'s':''):'Licencia vencida · puedes trabajar '+Math.max(0,(L.g||0)+dd)+' día(s) más';
+ return `<span class="card" style="padding:6px 10px;color:#b45309;font-size:12px">⚠ ${t}</span>`}
+{const _sb=stBadge;stBadge=()=>licChip()+_sb()}
+{const _go=goOff;goOff=function(msg){const lk=me?licOffline(null):'';
+ if(lk&&!OFFL){OFFL=true;modal(`<h3>Sin conexión</h3><p>${esc(lk)}</p><div class="row"><button onclick="tryOnline()">Reintentar conexión</button><button class="g" onclick="closeM();logout()">Salir</button></div>`);return}
+ _go(msg)}}
+{const _on=goOn;goOn=async()=>{await _on();if(!OFFL)closeM()}}
+async function sync(){const d=await rpc('p_data',{p_u:CRED.u,p_c:CRED.p});D.locales=d.locales;D.sucs=d.sucs;D.users=d.users;D.emps=d.emps||[];D.offl={};d.locales.forEach(l=>D.offl[l.id]=!!l.off);save()}
+addL=()=>{const n=$('#ln').value.trim(),e=+(($('#le')||{}).value)||null;if(n)cl('add_local',{n,e})};
+/* ---- Panel de SACC: empresas y licencias ---- */
+async function loadEmps(){if(!CLOUD||OFFL)return;try{EMPS=await rpc('p_empresas',{p_u:CRED.u,p_c:CRED.p})}catch(e){if(netErr(e))goOff();else throw e}}
+function empState(e){const h=new Date();h.setHours(0,0,0,0);if(e.estado!='activa')return '🔴 Suspendida';if(!e.vence)return '🟢 Activa · indefinida';
+ const dd=Math.round((new Date(e.vence+'T00:00:00')-h)/864e5);return dd>15?'🟢 Activa':dd>=0?'🟠 Vence en '+dd+' día'+(dd==1?'':'s'):dd+e.gracia_dias>=0?'🟠 Vencida (en gracia)':'⛔ Vencida'}
+function isoPlus(d){const x=new Date();x.setHours(12,0,0,0);x.setDate(x.getDate()+d);return x.getFullYear()+'-'+p2(x.getMonth()+1)+'-'+p2(x.getDate())}
+function vEmpresas(){if(!CLOUD)return '<div class="card"><p>Las empresas y licencias requieren Supabase (modo en línea).</p></div>';
+ return `<div class="top" style="margin:0 0 10px"><p class="mu" style="margin:0;flex:1">Cada empresa agrupa locales, sucursales y usuarios. Tú decides su vigencia (o indefinida) y si puede trabajar sin conexión.</p><button onclick="empForm()">+ Nueva empresa</button></div>
+ <div class="card"><div class="tw"><table><tr><th>Empresa</th><th>Estado</th><th>Vence</th><th>Sin conexión</th><th>Locales</th><th>Sucursales</th><th>Usuarios</th><th></th></tr>${EMPS.map(e=>`<tr><td><b>${esc(e.nombre)}</b></td><td>${empState(e)}</td><td>${e.vence?e.vence.split('-').reverse().join('-'):'∞ Indefinida'}</td><td>${e.offline_permitido?'Permitido'+(e.offline_dias!=null?' · '+e.offline_dias+' d':''):'⛔ Cortado'}</td><td>${e.n_locales}</td><td>${e.n_sucursales}${e.max_sucursales!=null?' / '+e.max_sucursales:''}</td><td>${e.n_usuarios}${e.max_usuarios!=null?' / '+e.max_usuarios:''}</td><td style="white-space:nowrap"><button class="g" onclick="empForm(${e.id})">Editar</button> <button class="g" onclick="empQ(${e.id},'estado')">${e.estado=='activa'?'Suspender':'Reactivar'}</button> <button class="g" onclick="empQ(${e.id},'30')">+30 d</button> <button class="g" onclick="empQ(${e.id},'365')">+1 año</button> <button class="g" onclick="empQ(${e.id},'inf')">∞</button> <button class="g" onclick="empQ(${e.id},'op')">${e.offline_permitido?'Cortar sin conexión':'Permitir sin conexión'}</button></td></tr>`).join('')||'<tr><td class="mu">Sin empresas</td></tr>'}</table></div></div>`}
+function empForm(id){const e=id?EMPS.find(x=>x.id==id):null;
+ modal(`<h3>${e?'Editar empresa':'Nueva empresa'}</h3><input id="en" placeholder="Nombre de la empresa" value="${e?esc(e.nombre):''}"><label class="mu">Vigencia de la licencia</label><div class="row"><select id="ev" onchange="$('#ef').style.display=this.value=='fecha'?'':'none'">${e?'<option value="keep">Mantener la actual</option>':''}<option value="inf" ${!e?'selected':''}>Indefinida (sin vencimiento)</option><option value="30">30 días desde hoy</option><option value="90">90 días desde hoy</option><option value="180">6 meses desde hoy</option><option value="365">1 año desde hoy</option><option value="fecha">Fecha exacta…</option></select><input type="date" id="ef" style="display:none" value="${e&&e.vence?e.vence:''}"></div>
+ <div class="row"><div><label class="mu">Días de gracia al vencer</label><input id="eg" type="number" min="0" value="${e?e.gracia_dias:7}"></div><div><label class="mu">Máx. sucursales (vacío = sin límite)</label><input id="ems" type="number" min="0" value="${e&&e.max_sucursales!=null?e.max_sucursales:''}"></div><div><label class="mu">Máx. usuarios (vacío = sin límite)</label><input id="emu" type="number" min="0" value="${e&&e.max_usuarios!=null?e.max_usuarios:''}"></div></div>
+ <label style="display:flex;gap:6px;align-items:center;margin:6px 0"><input type="checkbox" id="eo" style="width:auto" ${!e||e.offline_permitido?'checked':''}>Permitir trabajar sin conexión</label><label class="mu">Días máximos sin conexión antes de exigir internet (vacío = sin límite)</label><input id="eod" type="number" min="0" value="${e&&e.offline_dias!=null?e.offline_dias:''}">
+ <div class="row" style="margin-top:8px"><button class="g" onclick="closeM()">Cancelar</button><button onclick="empSave(${id||0})">Guardar</button></div>`);
+ const m=$('#md .mdl');if(m){m.style.maxWidth='580px';m.style.maxHeight='92vh';m.style.overflow='auto'}$('#ef').style.display=$('#ev').value=='fecha'?'':'none'}
+async function empCall(a,x){try{await rpc('p_admin',{p_u:CRED.u,p_c:CRED.p,p_a:a,p_x:x});closeM();await loadEmps();await sync().catch(()=>{});toast('Listo ✔');draw()}catch(e){toast(e.message)}}
+function empSave(id){const n=$('#en').value.trim();if(!n)return toast('Escribe el nombre de la empresa');
+ const sel=$('#ev').value,x={n,g:+$('#eg').value||0,ms:$('#ems').value===''?null:+$('#ems').value,mu:$('#emu').value===''?null:+$('#emu').value,op:$('#eo').checked,od:$('#eod').value===''?null:+$('#eod').value};
+ if(sel=='inf')x.vence=null;else if(sel=='fecha'){if(!$('#ef').value)return toast('Elige la fecha de vencimiento');x.vence=$('#ef').value}else if(sel!='keep')x.vence=isoPlus(+sel);
+ if(id)x.id=id;empCall(id?'upd_emp':'add_emp',x)}
+function empQ(id,k){const e=EMPS.find(x=>x.id==id);if(!e)return;
+ if(k=='30'||k=='365')return empCall('emp_extender',{id,dias:+k});
+ if(k=='inf')return empCall('emp_extender',{id,inf:true});
+ if(k=='op')return empCall('emp_offline',{id,op:!e.offline_permitido});
+ if(e.estado=='activa')return modal(`<h3>Suspender ${esc(e.nombre)}</h3><p>Sus usuarios perderán el acceso de inmediato y no podrán entrar, ni siquiera sin conexión, en cuanto sus equipos vuelvan a tener internet. Puedes reactivarla cuando quieras.</p><div class="row"><button class="g" onclick="closeM()">Cancelar</button><button class="o" onclick="empCall('emp_estado',{id:${id},estado:'suspendida'})">Suspender</button></div>`);
+ empCall('emp_estado',{id,estado:'activa'})}
 const DEN=[20000,10000,5000,2000,1000,500,100,50,10];
 function cur(){return D.cajas.find(c=>c.s==suc&&!c.cl&&c.u==me.u)}
 function sm(c){const v=D.sales.filter(s=>s.cj==c.id),f=m=>v.reduce((a,s)=>a+pmAmt(s,m),0);return{n:v.length,ef:f('Efectivo'),tj:f('Tarjeta'),tr:f('Transferencia'),tot:v.reduce((a,s)=>a+s.tot,0)}}
