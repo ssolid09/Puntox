@@ -764,6 +764,49 @@ function cqOpen(id){const v=D.sales.find(s=>s.id==id);if(!v)return;const dv=v.dv
  <div class="row" style="margin-top:8px"><button class="g" onclick="closeM()">Cerrar</button>${v.est!='anulada'&&!v.pend?`<button class="g" onclick="closeM();dvOpen(${v.id})">Devolver…</button>`:''}<button class="o" onclick="cqPrint(${v.id})">🖨 Reimprimir ticket</button></div>`);
  const mm=$('#md .mdl');if(mm){mm.style.maxWidth='520px';mm.style.maxHeight='92vh';mm.style.overflow='auto'}}
 function cqPrint(id){const v=D.sales.find(s=>s.id==id);if(!v)return;REP=true;try{printV(v)}finally{REP=false}}
+/* ===== v16: tickets con el nuevo diseño (logo, TKT-0001, subtotal/IVA/total) ===== */
+const TKS={iva:true,logo:true,msg:''};try{Object.assign(TKS,JSON.parse(localStorage.getItem('puntox_tk')||'{}'))}catch(e){}
+function tkSave(){try{localStorage.setItem('puntox_tk',JSON.stringify(TKS))}catch(e){}}
+ACC['º']=0xA7;ACC['ª']=0xA6;
+const IVAP=19,pad4=n=>String(Math.abs(n)).padStart(4,'0'),fdm=t=>{const d=new Date(t);return p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+d.getFullYear()+' '+p2(d.getHours())+':'+p2(d.getMinutes())};
+const TKLOGO='<svg width="46" height="46" viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="14" fill="#000"/><path fill="#fff" fill-rule="evenodd" d="M21 12h18a13 13 0 010 26h-8v14H21zM31 21v8h8a4 4 0 000-8z"/><path fill="#fff" d="M38 55h18L47 43z"/></svg>';
+const tkL=(a,b,st)=>`<div style="display:flex;justify-content:space-between;gap:6px${st?';'+st:''}"><span>${a}</span><span>${b}</span></div>`,tkSep='<div style="border-top:1px dashed #000;margin:7px 0"></div>';
+function tkWeb(){const c=window.PUNTOX_CONFIG||{};if(c.WEB)return c.WEB;const h=location.hostname;return(!h||/^(localhost|127\.)|claude/.test(h))?'':h}
+function bizOf(s){const sc=D.sucs.find(x=>x.id==s),l=sc&&D.locales.find(x=>x.id==sc.l),e=l&&(D.emps||[]).find(x=>x.id==l.emp);return e?e.n:''}
+function tkTop(s,title,num,t,who){const biz=bizOf(s),w=tkWeb();
+ return `<div style="text-align:center">${TKS.logo?`<div style="display:flex;align-items:center;justify-content:center;gap:8px">${TKLOGO}<div style="text-align:left;line-height:1.05"><div style="font-size:22px;font-weight:800;letter-spacing:1px">PUNTOX</div><div style="font-size:9px;letter-spacing:5px">SMART POS</div></div></div>`:''}<div style="margin-top:6px${TKS.logo?'':';font-weight:800;font-size:15px'}">${esc(biz||'PUNTOX SMART POS')}</div>${biz?`<div style="font-size:11px">${esc(snp(s))}</div>`:''}${w?`<div style="margin-top:3px">${esc(w)}</div>`:''}</div>${tkSep}<div style="text-align:center"><div style="font-weight:800;font-size:14px">${title}</div><div style="font-weight:800">N.º ${num}</div><div>${fdm(t)}</div>${who?`<div style="font-size:11px">Cajero: ${esc(who)}</div>`:''}</div>${tkSep}`}
+function tkPrint(h){let t=$('#tk');if(!t){t=document.createElement('div');t.id='tk';document.body.appendChild(t)}t.innerHTML=h;setTimeout(()=>window.print(),300)}
+function htmlV(v){const net=Math.round(v.tot/(1+IVAP/100)),L=v.items.map(i=>`<div>${esc(i.n)}</div>`+tkL(i.kg?kgq(i)+' kg x '+fmt(i.pr)+'/kg':i.q+' x '+fmt(i.pr),fmt(lt(i)))).join('');
+ return tkTop(v.s,'TICKET DE VENTA','TKT-'+pad4(v.n),v.t,v.u)+(REP?`<div style="text-align:center;font-weight:800">*** REIMPRESIÓN ***<br><span style="font-weight:400">Reimpreso: ${fdm(Date.now())}</span></div>${tkSep}`:'')
+ +`<div style="font-weight:800">Producto o servicio</div>${L}${tkSep}`+(TKS.iva?tkL('Subtotal',fmt(net))+tkL('IVA ('+IVAP+'%)',fmt(v.tot-net)):'')+tkL('<b style="font-size:15px">TOTAL</b>','<b style="font-size:15px">'+fmt(v.tot)+'</b>')+tkSep
+ +payLinesH(v,tkL)+tkSep+`<div style="text-align:center">${esc(TKS.msg||'¡Gracias por su compra!')}<br>Documento no tributario</div>`}
+function htmlC(c){const G=c.g||[],te=c.cl||Date.now();let ct=0;
+ const den=DEN.map(d=>{const n=(c.cnt||{})[d];if(!n)return '';ct+=n*d;return tkL(n+' x '+fmt(d),fmt(n*d))}).join('');
+ return tkTop(c.s,'CIERRE DE CAJA','CIE-'+pad4(c.id),te,c.u)+tkL('Apertura',fdm(c.op))+tkL('Cierre',fdm(te))+tkSep+tkL('Fondo inicial',fmt(c.fo))+tkL('Ventas ('+c.n+')',fmt(c.tot))+tkL('&nbsp;Efectivo',fmt(c.ef))+tkL('&nbsp;Tarjeta',fmt(c.tj))+tkL('&nbsp;Transferencia',fmt(c.tr))+(c.devol?tkL('Devoluciones (restadas)',fmt(c.devol)):'')+tkSep
+ +'<div style="font-weight:800">Gastos</div>'+(G.map(g=>tkL(esc(g.d),fmt(g.m))).join('')||'<div>Sin gastos</div>')+tkL('Total gastos',fmt(gs(c)))+tkSep
+ +'<div style="font-weight:800">Conteo de billetes y monedas</div>'+den+tkL('<b>Total contado</b>','<b>'+fmt(ct)+'</b>')+tkL('Efectivo a cuadrar',fmt(c.ex))+tkSep
+ +`<div style="text-align:center;font-weight:800;font-size:14px">${ct==c.ex?'CUADRADO':'DIFERENCIA '+fmt(ct-c.ex)}</div>`+tkSep+'<div style="text-align:center">Firma: ____________________<br>Documento no tributario</div>'}
+function htmlD(d){return tkTop(d.s,d.tipo=='anulacion'?'ANULACIÓN':'DEVOLUCIÓN','DEV-'+pad4(d.n),d.t,d.u)+`<div style="text-align:center">Venta N.º TKT-${pad4(d.vn)}</div>${tkSep}<div style="font-weight:800">Producto o servicio</div>`
+ +d.items.map(i=>`<div>${esc(i.n)}</div>`+tkL(i.kg?kgq(i)+' kg x '+fmt(i.pr)+'/kg':i.q+' x '+fmt(i.pr),fmt(lt(i)))).join('')+tkSep+tkL('<b style="font-size:15px">TOTAL REEMBOLSO</b>','<b style="font-size:15px">'+fmt(d.tot)+'</b>')+tkL('Forma',d.rf)+tkSep+`<div>Motivo: ${esc(d.mot)}</div>${tkSep}<div style="text-align:center">Firma cliente: ____________________<br>Comprobante interno<br>Documento no tributario</div>`}
+/* ESC/POS (impresión directa por USB): mismo orden y textos, sin logo */
+function tkHdrR(s,title,num,t,who){const biz=bizOf(s),w=tkWeb();return ['^PUNTOX SMART POS',...(biz?['^'+biz.toUpperCase(),'^'+snp(s)]:[]),...(w?['^'+w]:[]),DASH,'^'+title,'^N.º '+num,'^'+fdm(t),...(who?['^Cajero: '+who]:[]),DASH]}
+function tkV(v){const net=Math.round(v.tot/(1+IVAP/100)),L=[...tkHdrR(v.s,'TICKET DE VENTA','TKT-'+pad4(v.n),v.t,v.u),...(REP?['^*** REIMPRESIÓN ***','^Reimpreso: '+fdm(Date.now()),DASH]:[]),'Producto o servicio'];
+ v.items.forEach(i=>{L.push(i.n);L.push(lineLR(i.kg?kgq(i)+' kg x '+fmt(i.pr)+'/kg':i.q+' x '+fmt(i.pr),fmt(lt(i))))});
+ L.push(DASH);if(TKS.iva)L.push(lineLR('Subtotal',fmt(net)),lineLR('IVA ('+IVAP+'%)',fmt(v.tot-net)));L.push(lineLR('TOTAL',fmt(v.tot)),DASH,...payLinesR(v),DASH,'^'+(TKS.msg||'¡Gracias por su compra!'),'^Documento no tributario');return L}
+function tkC(c){const G=c.g||[],te=c.cl||Date.now();let ct=0;
+ const L=[...tkHdrR(c.s,'CIERRE DE CAJA','CIE-'+pad4(c.id),te,c.u),lineLR('Apertura',fdm(c.op)),lineLR('Cierre',fdm(te)),DASH,lineLR('Fondo inicial',fmt(c.fo)),lineLR('Ventas ('+c.n+')',fmt(c.tot)),lineLR(' Efectivo',fmt(c.ef)),lineLR(' Tarjeta',fmt(c.tj)),lineLR(' Transferencia',fmt(c.tr)),...(c.devol?[lineLR('Devoluciones (restadas)',fmt(c.devol))]:[]),DASH,'Gastos'];
+ G.forEach(g=>L.push(lineLR(g.d,fmt(g.m))));if(!G.length)L.push('Sin gastos');L.push(lineLR('Total gastos',fmt(gs(c))),DASH,'Conteo de billetes y monedas');
+ DEN.forEach(d=>{const n=(c.cnt||{})[d];if(n){ct+=n*d;L.push(lineLR(n+' x '+fmt(d),fmt(n*d)))}});
+ L.push(lineLR('Total contado',fmt(ct)),lineLR('Efectivo a cuadrar',fmt(c.ex)),DASH,'^'+(ct==c.ex?'CUADRADO':'DIFERENCIA '+fmt(ct-c.ex)),DASH,'^Firma: ____________________','^Documento no tributario');return L}
+function tkD(d){const L=[...tkHdrR(d.s,d.tipo=='anulacion'?'ANULACIÓN':'DEVOLUCIÓN','DEV-'+pad4(d.n),d.t,d.u),'^Venta N.º TKT-'+pad4(d.vn),DASH,'Producto o servicio'];
+ d.items.forEach(i=>{L.push(i.n);L.push(lineLR(i.kg?kgq(i)+' kg x '+fmt(i.pr)+'/kg':i.q+' x '+fmt(i.pr),fmt(lt(i))))});
+ L.push(DASH,lineLR('TOTAL REEMBOLSO',fmt(d.tot)),lineLR('Forma',d.rf),DASH,'Motivo: '+d.mot,DASH,'^Firma cliente: ____________________','^Comprobante interno','^Documento no tributario');return L}
+printV=v=>{if(HW.mode!='driver'&&HW.ok)rawPrint(tkV(v),cashOf(v)>0&&!REP);else tkPrint(htmlV(v))};
+prt=id=>{const c=D.cajas.find(x=>x.id==id);if(!c)return;if(HW.mode!='driver'&&HW.ok)rawPrint(tkC(c),false);else tkPrint(htmlC(c))};
+printD=d=>{if(HW.mode!='driver'&&HW.ok)return rawPrint(tkD(d),d.rf=='Efectivo');tkPrint(htmlD(d))};
+function tkTest(){printV({s:suc,n:1,t:Date.now(),u:me.u,m:'Efectivo',tot:7000,rec:10000,items:[{n:'Producto de prueba',pr:3500,q:2}]})}
+function tkCard(){return `<div class="card" style="margin-top:12px"><h3>Ticket de venta (este equipo)</h3><label style="display:flex;gap:6px;align-items:center;margin:4px 0"><input type="checkbox" style="width:auto" ${TKS.logo?'checked':''} onchange="TKS.logo=this.checked;tkSave()">Mostrar el logo (impresión con el diálogo del sistema)</label><label style="display:flex;gap:6px;align-items:flex-start;margin:4px 0"><input type="checkbox" style="width:auto;margin-top:3px" ${TKS.iva?'checked':''} onchange="TKS.iva=this.checked;tkSave()"><span>Mostrar el desglose de IVA (${IVAP} %). Los precios se consideran con IVA incluido.</span></label><input value="${esc(TKS.msg)}" placeholder="Mensaje al pie (por defecto: ¡Gracias por su compra!)" onchange="TKS.msg=this.value.trim();tkSave()"><div class="row" style="margin-top:6px"><button class="g" onclick="tkTest()">Imprimir ticket de prueba</button></div></div>`}
+{const _vp3=vPerfil;vPerfil=()=>_vp3()+tkCard()}
 const DEN=[20000,10000,5000,2000,1000,500,100,50,10];
 function cur(){return D.cajas.find(c=>c.s==suc&&!c.cl&&c.u==me.u)}
 function sm(c){const v=D.sales.filter(s=>s.cj==c.id),f=m=>v.reduce((a,s)=>a+pmAmt(s,m),0);return{n:v.length,ef:f('Efectivo'),tj:f('Tarjeta'),tr:f('Transferencia'),tot:v.reduce((a,s)=>a+s.tot,0)}}
